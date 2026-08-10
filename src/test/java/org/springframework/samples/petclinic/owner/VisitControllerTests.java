@@ -28,9 +28,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledInNativeImage;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.http.HttpStatus;
 import org.springframework.test.context.aot.DisabledInAotMode;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.util.Optional;
@@ -49,6 +51,10 @@ class VisitControllerTests {
 	private static final int TEST_OWNER_ID = 1;
 
 	private static final int TEST_PET_ID = 1;
+
+	private static final int INVALID_OWNER_ID = 100;
+
+	private static final int INVALID_PET_ID = 100;
 
 	@Autowired
 	private MockMvc mockMvc;
@@ -104,6 +110,20 @@ class VisitControllerTests {
 			.andExpect(model().attributeHasFieldErrorCode("visit", "date", "typeMismatch.visitDate"))
 			.andExpect(status().isOk())
 			.andExpect(view().name("pets/createOrUpdateVisitForm"));
+	}
+
+	@Test
+	void testOwnerNotFound() throws Exception {
+		mockMvc.perform(get("/owners/{ownerId}/pets/{petId}/visits/new", INVALID_OWNER_ID, TEST_PET_ID))
+			.andExpect(status().isNotFound())
+			.andExpect(view().name("error")); // Assuming a generic error view
+	}
+
+	@Test
+	void testPetNotFound() throws Exception {
+		mockMvc.perform(get("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, INVALID_PET_ID))
+			.andExpect(status().isNotFound())
+			.andExpect(view().name("error")); // Assuming a generic error view
 	}
 
 }
