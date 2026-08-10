@@ -50,6 +50,8 @@ class VisitControllerTests {
 
 	private static final int TEST_PET_ID = 1;
 
+	private static final int NON_EXISTENT_ID = 100;
+
 	@Autowired
 	private MockMvc mockMvc;
 
@@ -63,6 +65,7 @@ class VisitControllerTests {
 		owner.addPet(pet);
 		pet.setId(TEST_PET_ID);
 		given(this.owners.findById(TEST_OWNER_ID)).willReturn(Optional.of(owner));
+		given(this.owners.findById(NON_EXISTENT_ID)).willReturn(Optional.empty());
 	}
 
 	@Test
@@ -70,6 +73,20 @@ class VisitControllerTests {
 		mockMvc.perform(get("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, TEST_PET_ID))
 			.andExpect(status().isOk())
 			.andExpect(view().name("pets/createOrUpdateVisitForm"));
+	}
+
+	@Test
+	void initNewVisitFormWhenOwnerNotFound() throws Exception {
+		mockMvc.perform(get("/owners/{ownerId}/pets/{petId}/visits/new", NON_EXISTENT_ID, TEST_PET_ID))
+			.andExpect(status().isNotFound())
+			.andExpect(view().name("exception"));
+	}
+
+	@Test
+	void initNewVisitFormWhenPetNotFound() throws Exception {
+		mockMvc.perform(get("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, NON_EXISTENT_ID))
+			.andExpect(status().isNotFound())
+			.andExpect(view().name("exception"));
 	}
 
 	@Test
@@ -104,6 +121,28 @@ class VisitControllerTests {
 			.andExpect(model().attributeHasFieldErrorCode("visit", "date", "typeMismatch.visitDate"))
 			.andExpect(status().isOk())
 			.andExpect(view().name("pets/createOrUpdateVisitForm"));
+	}
+
+	@Test
+	void processNewVisitFormWhenOwnerNotFound() throws Exception {
+		mockMvc
+			.perform(post("/owners/{ownerId}/pets/{petId}/visits/new", NON_EXISTENT_ID, TEST_PET_ID)
+				.param("name", "George")
+				.param("date", LocalDate.now().plusDays(1).toString())
+				.param("description", "Visit Description"))
+			.andExpect(status().isNotFound())
+			.andExpect(view().name("exception"));
+	}
+
+	@Test
+	void processNewVisitFormWhenPetNotFound() throws Exception {
+		mockMvc
+			.perform(post("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, NON_EXISTENT_ID)
+				.param("name", "George")
+				.param("date", LocalDate.now().plusDays(1).toString())
+				.param("description", "Visit Description"))
+			.andExpect(status().isNotFound())
+			.andExpect(view().name("exception"));
 	}
 
 }
