@@ -44,8 +44,14 @@ class VisitController {
 
 	private final OwnerRepository owners;
 
-	public VisitController(OwnerRepository owners) {
+	private final VisitService visitService;
+
+	private final ConfigurationService configurationService;
+
+	public VisitController(OwnerRepository owners, VisitService visitService, ConfigurationService configurationService) {
 		this.owners = owners;
+		this.visitService = visitService;
+		this.configurationService = configurationService;
 	}
 
 	@InitBinder
@@ -80,15 +86,21 @@ class VisitController {
 		return visit;
 	}
 
+	@ModelAttribute("visitTypes")
+	public VisitType[] visitTypes() {
+		return VisitType.values();
+	}
+
 	@ModelAttribute("minVisitDate")
 	public LocalDate minVisitDate() {
-		return LocalDate.now().plusDays(1);
+		return LocalDate.now();
 	}
 
 	// Spring MVC calls method loadPetWithVisit(...) before initNewVisitForm is
 	// called
 	@GetMapping("/owners/{ownerId}/pets/{petId}/visits/new")
-	public String initNewVisitForm() {
+	public String initNewVisitForm(@ModelAttribute Pet pet, Map<String, Object> model) {
+		model.put("visit", new Visit());
 		return "pets/createOrUpdateVisitForm";
 	}
 
@@ -97,8 +109,9 @@ class VisitController {
 	@PostMapping("/owners/{ownerId}/pets/{petId}/visits/new")
 	public String processNewVisitForm(@ModelAttribute Owner owner, @PathVariable int petId, @Valid Visit visit,
 			BindingResult result, RedirectAttributes redirectAttributes) {
+
 		if (visit.getDate() != null && !visit.getDate().isAfter(LocalDate.now())) {
-			result.rejectValue("date", "typeMismatch.visitDate");
+			result.rejectValue("date", "typeMismatch.visitDate", "Visit date cannot be in the past.");
 		}
 
 		if (result.hasErrors()) {
@@ -108,6 +121,38 @@ class VisitController {
 		owner.addVisit(petId, visit);
 		this.owners.save(owner);
 		redirectAttributes.addFlashAttribute("message", "Your visit has been booked");
+		return "redirect:/owners/{ownerId}";
+	}
+
+	@GetMapping("/owners/{ownerId}/pets/{petId}/visits/{visitId}/edit")
+	public String initUpdateVisitForm(@PathVariable int visitId, Map<String, Object> model) {
+		Visit visit = this.visitService.findById(visitId)
+				.orElseThrow(() -> new IllegalArgumentException("Visit not found with id: " + visitId));
+		model.put("visit", visit);
+		return "pets/createOrUpdateVisitForm";
+	}
+
+	@PostMapping("/owners/{ownerId}/pets/{petId}/visits/{visitId}/edit")
+	public String processUpdateVisitForm(@PathVariable int visitId, @Valid Visit visit, BindingResult result,
+			RedirectAttributes redirectAttributes) {
+
+		if (visit.getDate() != null && !visit.getDate().isAfter(LocalDate.now())) {
+			result.rejectValue("date", "typeMismatch.visitDate", "Visit date cannot be in the past.");
+		}
+
+		if (result.hasErrors()) {
+			return "pets/createOrUpdateVisitForm";
+		}
+
+		Visit existingVisit = this.visitService.findById(visitId).orElseThrow(() -> new IllegalArgumentException("Visit not found with id: " + visitId));
+
+		existingVisit.setDate(visit.getDate());
+		existingVisit.setDescription(visit.getDescription());
+		existingVisit.setVisitType(visit.getVisitType());
+		existingVisit.setVeterinarian(visit.getVeterinarian());
+
+		this.visitService.save(existingVisit);
+		redirectAttributes.addFlashAttribute("message", "Your visit has been updated");
 		return "redirect:/owners/{ownerId}";
 	}
 
