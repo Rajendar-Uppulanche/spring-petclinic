@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Visit History</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <h1>Visit History for {{ pet.name }}</h1>
+
+    <p><strong>Owner:</strong> {{ owner.first_name }} {{ owner.last_name }}</p>
+
+    <a href="{{ url_for('new_visit', owner_id=owner.id, pet_id=pet.id) }}">Add New Visit</a>
+
+    {% if pet.visits %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Description</th>
+                    <th>Visit Type</th>
+                    <th>Veterinarian</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for visit in pet.visits %}
+                    <tr>
+                        <td>{{ visit.visit_date.strftime('%Y-%m-%d') }}</td>
+                        <td>{{ visit.description }}</td>
+                        <td>{{ visit.visit_type.value }}</td>
+                        <td>
+                            {% if visit.veterinarian_id %}
+                                {% set vet = veterinarians | selectattr('id', 'equalto', visit.veterinarian_id) | first %}
+                                {{ vet.first_name }} {{ vet.last_name }}
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{{ url_for('edit_visit', owner_id=owner.id, pet_id=pet.id, visit_id=visit.id) }}">Edit Description</a>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No visits recorded for this pet yet.</p>
+    {% endif %}
+
+    <br>
+    <a href="{{ url_for('show_owner', owner_id=owner.id) }}">Back to Owner Details</a>
+</body>
+</html>
