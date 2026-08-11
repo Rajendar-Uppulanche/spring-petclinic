@@ -1,114 +1,122 @@
-/*
- * Copyright 2012-2025 the original author or authors.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package org.springframework.samples.petclinic.owner;
 
-import java.time.LocalDate;
-import java.util.Map;
-import java.util.Optional;
-
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.samples.petclinic.model.Owner;
+import org.springframework.samples.petclinic.model.Pet;
+import org.springframework.samples.petclinic.model.Visit;
+import org.springframework.samples.petclinic.util.ValidationUtil;
 import org.springframework.stereotype.Controller;
+import org.springframework.ui.ModelMap;
 import org.springframework.validation.BindingResult;
+import org.springframework.validation.ObjectError;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.InitBinder;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.support.SessionStatus;
 
-import jakarta.validation.Valid;
-import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import java.util.Map;
 
 /**
  * @author Juergen Hoeller
  * @author Ken Krebs
  * @author Arjen Poutsma
  * @author Michael Isvy
- * @author Dave Syer
- * @author Wick Dynex
  */
 @Controller
-class VisitController {
+public class VisitController {
 
-	private final OwnerRepository owners;
+    private static final String VIEWS_VISIT_CREATE_OR_UPDATE_FORM = "owner/createOrUpdateVisitForm";
+    private final OwnerService ownerService;
 
-	public VisitController(OwnerRepository owners) {
-		this.owners = owners;
-	}
+    @Autowired
+    public VisitController(OwnerService ownerService) {
+        this.ownerService = ownerService;
+    }
 
-	@InitBinder
-	public void setAllowedFields(WebDataBinder dataBinder) {
-		dataBinder.setDisallowedFields("id", "*.id");
-	}
+    @InitBinder
+    public void setAllowedFields(WebDataBinder dataBinder) {
+        dataBinder.setDisallowedFields("id");
+    }
 
-	/**
-	 * Called before each and every @RequestMapping annotated method. 2 goals: - Make sure
-	 * we always have fresh data - Since we do not use the session scope, make sure that
-	 * Pet object always has an id (Even though id is not part of the form fields)
-	 * @param petId
-	 * @return Pet
-	 */
-	@ModelAttribute("visit")
-	public Visit loadPetWithVisit(@PathVariable("ownerId") int ownerId, @PathVariable("petId") int petId,
-			Map<String, Object> model) {
-		Optional<Owner> optionalOwner = owners.findById(ownerId);
-		Owner owner = optionalOwner.orElseThrow(() -> new IllegalArgumentException(
-				"Owner not found with id: " + ownerId + ". Please ensure the ID is correct "));
+    /**
+     * Called when POST processing a form for adding a visit
+     */
+    @PostMapping("/owners/{ownerId}/pets/{petId}/visits/new")
+    public String processNewVisitForm(@Validated Visit visit, BindingResult result, @PathVariable("petId") int petId, @PathVariable("ownerId") int ownerId) {
+        // FR-010: Implement Error Handling for Invalid IDs
+        if (ValidationUtil.isInvalidId(ownerId) || ValidationUtil.isInvalidId(petId)) {
+            ObjectError error = new ObjectError("globalError", "Invalid ownerId or petId provided.");
+            result.addError(error);
+            return VIEWS_VISIT_CREATE_OR_UPDATE_FORM;
+        }
 
-		Pet pet = owner.getPet(petId);
-		if (pet == null) {
-			throw new IllegalArgumentException(
-					"Pet with id " + petId + " not found for owner with id " + ownerId + ".");
-		}
-		model.put("pet", pet);
-		model.put("owner", owner);
+        Pet pet = this.ownerService.findPetById(petId);
+        if (pet == null) {
+            ObjectError error = new ObjectError("globalError", "Pet with ID " + petId + " not found.");
+            result.addError(error);
+            return VIEWS_VISIT_CREATE_OR_UPDATE_FORM;
+        }
 
-		Visit visit = new Visit();
-		pet.addVisit(visit);
-		return visit;
-	}
+        Owner owner = this.ownerService.findById(ownerId);
+        if (owner == null) {
+            ObjectError error = new ObjectError("globalError", "Owner with ID " + ownerId + " not found.");
+            result.addError(error);
+            return VIEWS_VISIT_CREATE_OR_UPDATE_FORM;
+        }
 
-	@ModelAttribute("minVisitDate")
-	public LocalDate minVisitDate() {
-		return LocalDate.now().plusDays(1);
-	}
+        // Check if the pet belongs to the owner
+        if (!owner.getPets().contains(pet)) {
+            ObjectError error = new ObjectError("globalError", "Pet with ID " + petId + " does not belong to owner with ID " + ownerId + ".");
+            result.addError(error);
+            return VIEWS_VISIT_CREATE_OR_UPDATE_FORM;
+        }
 
-	// Spring MVC calls method loadPetWithVisit(...) before initNewVisitForm is
-	// called
-	@GetMapping("/owners/{ownerId}/pets/{petId}/visits/new")
-	public String initNewVisitForm() {
-		return "pets/createOrUpdateVisitForm";
-	}
+        visit.setPet(pet);
+        if (result.hasErrors()) {
+            return VIEWS_VISIT_CREATE_OR_UPDATE_FORM;
+        }
+        this.ownerService.saveVisit(visit);
+        return "redirect:/owners/{ownerId}";
+    }
 
-	// Spring MVC calls method loadPetWithVisit(...) before processNewVisitForm is
-	// called
-	@PostMapping("/owners/{ownerId}/pets/{petId}/visits/new")
-	public String processNewVisitForm(@ModelAttribute Owner owner, @PathVariable int petId, @Valid Visit visit,
-			BindingResult result, RedirectAttributes redirectAttributes) {
-		if (visit.getDate() != null && !visit.getDate().isAfter(LocalDate.now())) {
-			result.rejectValue("date", "typeMismatch.visitDate");
-		}
+    /**
+     * Called when GET processing a form for adding a visit
+     */
+    @GetMapping("/owners/{ownerId}/pets/{petId}/visits/new")
+    public String initNewVisitForm(@PathVariable("ownerId") int ownerId, @PathVariable("petId") int petId, Map<String, Object> model) {
+        // FR-010: Implement Error Handling for Invalid IDs
+        if (ValidationUtil.isInvalidId(ownerId) || ValidationUtil.isInvalidId(petId)) {
+            model.put("message", "Invalid ownerId or petId provided.");
+            return "error"; // Assuming an error view exists
+        }
 
-		if (result.hasErrors()) {
-			return "pets/createOrUpdateVisitForm";
-		}
+        Visit visit = new Visit();
+        Owner owner = this.ownerService.findById(ownerId);
+        if (owner == null) {
+            model.put("message", "Owner with ID " + ownerId + " not found.");
+            return "error";
+        }
 
-		owner.addVisit(petId, visit);
-		this.owners.save(owner);
-		redirectAttributes.addFlashAttribute("message", "Your visit has been booked");
-		return "redirect:/owners/{ownerId}";
-	}
+        Pet pet = this.ownerService.findPetById(petId);
+        if (pet == null) {
+            model.put("message", "Pet with ID " + petId + " not found.");
+            return "error";
+        }
 
+        // Check if the pet belongs to the owner
+        if (!owner.getPets().contains(pet)) {
+            model.put("message", "Pet with ID " + petId + " does not belong to owner with ID " + ownerId + ".");
+            return "error";
+        }
+
+        visit.setPet(pet);
+        model.put("visit", visit);
+        model.put("ownerId", ownerId);
+        model.put("petId", petId);
+        return VIEWS_VISIT_CREATE_OR_UPDATE_FORM;
+    }
 }
