@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Visit{% endblock %}
+
+{% block content %}
+    <h1 class="mb-4">Edit Visit for {{ pet.name }}</h1>
+    <p><strong>Date:</strong> {{ visit.date.strftime('%Y-%m-%d') }}</p>
+    {% if visit.veterinarian %}
+        <p><strong>Veterinarian:</strong> {{ visit.veterinarian.name }}</p>
+    {% else %}
+        <p><strong>Veterinarian:</strong> Not Assigned</p>
+    {% endif %}
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <form method="POST" action="{{ url_for('visit.edit_visit', visit_id=visit.id) }}">
+        {{ form.hidden_tag() }}
+        <div class="mb-3">
+            {{ form.description.label(class="form-label") }}
+            {{ form.description(class="form-control", rows=3) }}
+            {% if form.description.errors %}
+                {% for error in form.description.errors %}
+                    <div class="text-danger">{{ error }}</div>
+                {% endfor %}
+            {% endif %}
+        </div>
+        {{ form.submit(class="btn btn-primary") }}
+    </form>
+
+    <p class="mt-3"><a href="{{ url_for('owner.profile', owner_id=pet.owner_id) }}" class="btn btn-secondary">Back to Owner Profile</a></p>
+{% endblock %}
