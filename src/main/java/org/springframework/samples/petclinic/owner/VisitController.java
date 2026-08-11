@@ -1,12 +1,12 @@
 /*
  * Copyright 2012-2025 the original author or authors.
- *
+ * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * 
  *      https://www.apache.org/licenses/LICENSE-2.0
- *
+ * 
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -44,13 +44,16 @@ class VisitController {
 
 	private final OwnerRepository owners;
 
-	public VisitController(OwnerRepository owners) {
+	private final VisitRepository visits;
+
+	public VisitController(OwnerRepository owners, VisitRepository visits) {
 		this.owners = owners;
+		this.visits = visits;
 	}
 
 	@InitBinder
 	public void setAllowedFields(WebDataBinder dataBinder) {
-		dataBinder.setDisallowedFields("id", "*.id");
+		dataBinder.setDisallowedFields("id", "*.id", "userId", "*.userId");
 	}
 
 	/**
@@ -80,25 +83,28 @@ class VisitController {
 		return visit;
 	}
 
-	@ModelAttribute("minVisitDate")
-	public LocalDate minVisitDate() {
-		return LocalDate.now().plusDays(1);
+	@ModelAttribute("visitTypes")
+	public VisitType[] populateVisitTypes() {
+		return VisitType.values();
 	}
 
 	// Spring MVC calls method loadPetWithVisit(...) before initNewVisitForm is
 	// called
 	@GetMapping("/owners/{ownerId}/pets/{petId}/visits/new")
-	public String initNewVisitForm() {
+	public String initNewVisitForm(@ModelAttribute Owner owner, @ModelAttribute Pet pet,
+			Map<String, Object> model) {
 		return "pets/createOrUpdateVisitForm";
 	}
 
 	// Spring MVC calls method loadPetWithVisit(...) before processNewVisitForm is
 	// called
 	@PostMapping("/owners/{ownerId}/pets/{petId}/visits/new")
-	public String processNewVisitForm(@ModelAttribute Owner owner, @PathVariable int petId, @Valid Visit visit,
-			BindingResult result, RedirectAttributes redirectAttributes) {
+	public String processNewVisitForm(@ModelAttribute Owner owner, @PathVariable int petId,
+			@Valid Visit visit, BindingResult result,
+			RedirectAttributes redirectAttributes) {
+
 		if (visit.getDate() != null && !visit.getDate().isAfter(LocalDate.now())) {
-			result.rejectValue("date", "typeMismatch.visitDate");
+			result.rejectValue("date", "typeMismatch.visitDate", "Visit date must be in the future.");
 		}
 
 		if (result.hasErrors()) {
@@ -108,6 +114,30 @@ class VisitController {
 		owner.addVisit(petId, visit);
 		this.owners.save(owner);
 		redirectAttributes.addFlashAttribute("message", "Your visit has been booked");
+		return "redirect:/owners/{ownerId}";
+	}
+
+	@GetMapping("/owners/*/pets/{petId}/visits/{visitId}/edit")
+	public String initEditVisitForm(@PathVariable("visitId") int visitId,
+			Map<String, Object> model) {
+		Visit visit = this.visits.findById(visitId);
+		model.put("visit", visit);
+		return "pets/createOrUpdateVisitForm";
+	}
+
+	@PostMapping("/owners/*/pets/{petId}/visits/{visitId}/edit")
+	public String processEditVisitForm(@Valid Visit visit, BindingResult result,
+			@PathVariable("petId") int petId,
+			RedirectAttributes redirectAttributes) {
+
+		if (result.hasErrors()) {
+			return "pets/createOrUpdateVisitForm";
+		}
+
+		Visit visitToUpdate = this.visits.findById(visit.getId());
+		visitToUpdate.setDescription(visit.getDescription());
+		this.visits.save(visitToUpdate);
+		redirectAttributes.addFlashAttribute("message", "Your visit has been updated");
 		return "redirect:/owners/{ownerId}";
 	}
 

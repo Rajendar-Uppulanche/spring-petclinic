@@ -1,12 +1,12 @@
 /*
  * Copyright 2012-2025 the original author or authors.
- *
+ * 
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
- *
+ * 
  *      https://www.apache.org/licenses/LICENSE-2.0
- *
+ * 
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -50,11 +50,16 @@ class VisitControllerTests {
 
 	private static final int TEST_PET_ID = 1;
 
+	private static final int TEST_VISIT_ID = 1;
+
 	@Autowired
 	private MockMvc mockMvc;
 
 	@MockitoBean
 	private OwnerRepository owners;
+
+	@MockitoBean
+	private VisitRepository visits;
 
 	@BeforeEach
 	void init() {
@@ -63,6 +68,12 @@ class VisitControllerTests {
 		owner.addPet(pet);
 		pet.setId(TEST_PET_ID);
 		given(this.owners.findById(TEST_OWNER_ID)).willReturn(Optional.of(owner));
+
+		Visit visit = new Visit();
+		visit.setId(TEST_VISIT_ID);
+		visit.setDate(LocalDate.now().plusDays(1));
+		visit.setDescription("Test Description");
+		given(this.visits.findById(TEST_VISIT_ID)).willReturn(visit);
 	}
 
 	@Test
@@ -104,6 +115,63 @@ class VisitControllerTests {
 			.andExpect(model().attributeHasFieldErrorCode("visit", "date", "typeMismatch.visitDate"))
 			.andExpect(status().isOk())
 			.andExpect(view().name("pets/createOrUpdateVisitForm"));
+	}
+
+	@Test
+	void initEditVisitFormSuccess() throws Exception {
+		mockMvc.perform(get("/owners/*/pets/{petId}/visits/{visitId}/edit", TEST_PET_ID, TEST_VISIT_ID))
+			.andExpect(status().isOk())
+			.andExpect(view().name("pets/createOrUpdateVisitForm"));
+	}
+
+	@Test
+	void processEditVisitFormSuccess() throws Exception {
+		mockMvc
+			.perform(post("/owners/*/pets/{petId}/visits/{visitId}/edit", TEST_PET_ID, TEST_VISIT_ID)
+				.param("description", "Updated Visit Description"))
+			.andExpect(status().is3xxRedirection())
+			.andExpect(view().name("redirect:/owners/{ownerId}"));
+	}
+
+	@Test
+	void processEditVisitFormHasErrors() throws Exception {
+		mockMvc
+			.perform(post("/owners/*/pets/{petId}/visits/{visitId}/edit", TEST_PET_ID, TEST_VISIT_ID))
+			.andExpect(model().attributeHasErrors("visit"))
+			.andExpect(status().isOk())
+			.andExpect(view().name("pets/createOrUpdateVisitForm"));
+	}
+
+	@Test
+	void processEditVisitFormDisallowsDateChange() throws Exception {
+		mockMvc
+			.perform(post("/owners/*/pets/{petId}/visits/{visitId}/edit", TEST_PET_ID, TEST_VISIT_ID)
+				.param("date", LocalDate.now().minusDays(1).toString()))
+			.andExpect(model().attributeHasFieldErrors("visit", "date"))
+			.andExpect(model().attributeHasFieldErrorCode("visit", "date", "typeMismatch.visitDate"))
+			.andExpect(status().isOk())
+			.andExpect(view().name("pets/createOrUpdateVisitForm"));
+	}
+
+	@Test
+	void processNewVisitFormDiscardsUserId() throws Exception {
+		mockMvc
+			.perform(post("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, TEST_PET_ID)
+				.param("userId", "999")
+				.param("date", LocalDate.now().plusDays(1).toString())
+				.param("description", "Visit Description"))
+			.andExpect(status().is3xxRedirection())
+			.andExpect(view().name("redirect:/owners/{ownerId}"));
+	}
+
+	@Test
+	void processEditVisitFormDiscardsUserId() throws Exception {
+		mockMvc
+			.perform(post("/owners/*/pets/{petId}/visits/{visitId}/edit", TEST_PET_ID, TEST_VISIT_ID)
+				.param("userId", "999")
+				.param("description", "Updated Visit Description"))
+			.andExpect(status().is3xxRedirection())
+			.andExpect(view().name("redirect:/owners/{ownerId}"));
 	}
 
 }
