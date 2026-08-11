@@ -50,6 +50,10 @@ class VisitControllerTests {
 
 	private static final int TEST_PET_ID = 1;
 
+	private static final int INVALID_OWNER_ID = 999;
+
+	private static final int INVALID_PET_ID = 999;
+
 	@Autowired
 	private MockMvc mockMvc;
 
@@ -100,10 +104,42 @@ class VisitControllerTests {
 				.param("name", "George")
 				.param("date", LocalDate.now().toString())
 				.param("description", "Visit Description"))
-			.andExpect(model().attributeHasFieldErrors("visit", "date"))
-			.andExpect(model().attributeHasFieldErrorCode("visit", "date", "typeMismatch.visitDate"))
+			.andExpect(model().attributeHasFieldErrors("visit", "date")),
+			.andExpect(model().attributeHasFieldErrorCode("visit", "date", "typeMismatch.visitDate")),
 			.andExpect(status().isOk())
 			.andExpect(view().name("pets/createOrUpdateVisitForm"));
+	}
+
+	@Test
+	void initNewVisitFormWhenOwnerNotFound() throws Exception {
+		mockMvc.perform(get("/owners/{ownerId}/pets/{petId}/visits/new", INVALID_OWNER_ID, TEST_PET_ID))
+			.andExpect(status().isNotFound());
+	}
+
+	@Test
+	void initNewVisitFormWhenPetNotFound() throws Exception {
+		mockMvc.perform(get("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, INVALID_PET_ID))
+			.andExpect(status().isNotFound());
+	}
+
+	@Test
+	void processNewVisitFormWhenOwnerNotFound() throws Exception {
+		mockMvc
+			.perform(post("/owners/{ownerId}/pets/{petId}/visits/new", INVALID_OWNER_ID, TEST_PET_ID)
+				.param("name", "George")
+				.param("date", LocalDate.now().plusDays(1).toString())
+				.param("description", "Visit Description"))
+			.andExpect(status().isNotFound());
+	}
+
+	@Test
+	void processNewVisitFormWhenPetNotFound() throws Exception {
+		mockMvc
+			.perform(post("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, INVALID_PET_ID)
+				.param("name", "George")
+				.param("date", LocalDate.now().plusDays(1).toString())
+				.param("description", "Visit Description"))
+			.andExpect(status().isNotFound());
 	}
 
 }
