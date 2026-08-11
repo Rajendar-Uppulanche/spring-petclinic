@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Search Owner</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <h1>Search Owner</h1>
+    <form method="POST" action="{{ url_for('search_owners') }}">
+        <label for="lastName">Last Name:</label>
+        <input type="text" id="lastName" name="lastName" value="{{ lastName | default('') }}">
+        <button type="submit">Search</button>
+    </form>
+
+    {% if owners %}
+        <h2>Owners Found</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Address</th>
+                    <th>Phone</th>
+                    <th>Pets</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for owner in owners %}
+                    <tr>
+                        <td><a href="{{ url_for('show_owner', owner_id=owner.id) }}">{{ owner.first_name }} {{ owner.last_name }}</a></td>
+                        <td>{{ owner.address }}</td>
+                        <td>{{ owner.phone }}</td>
+                        <td>
+                            {% for pet in owner.pets %}
+                                {{ pet.name }}{% if not loop.last %}, {% endif %}
+                            {% endfor %}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% elif search_performed %}
+        <p>No owners found with that last name.</p>
+    {% endif %}
+</body>
+</html>
