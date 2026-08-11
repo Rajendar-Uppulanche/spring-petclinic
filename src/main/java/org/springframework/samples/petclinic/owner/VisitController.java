@@ -44,8 +44,11 @@ class VisitController {
 
 	private final OwnerRepository owners;
 
-	public VisitController(OwnerRepository owners) {
+	private final VisitService visitService;
+
+	public VisitController(OwnerRepository owners, VisitService visitService) {
 		this.owners = owners;
+		this.visitService = visitService;
 	}
 
 	@InitBinder
@@ -80,9 +83,14 @@ class VisitController {
 		return visit;
 	}
 
-	@ModelAttribute("minVisitDate")
-	public LocalDate minVisitDate() {
-		return LocalDate.now().plusDays(1);
+	@ModelAttribute("visitTypes")
+	public java.util.List<VisitType> visitTypes() {
+		return visitService.findAllVisitTypes();
+	}
+
+	@ModelAttribute("veterinarians")
+	public java.util.List<Veterinarian> veterinarians() {
+		return visitService.findAllVeterinarians();
 	}
 
 	// Spring MVC calls method loadPetWithVisit(...) before initNewVisitForm is
@@ -97,9 +105,6 @@ class VisitController {
 	@PostMapping("/owners/{ownerId}/pets/{petId}/visits/new")
 	public String processNewVisitForm(@ModelAttribute Owner owner, @PathVariable int petId, @Valid Visit visit,
 			BindingResult result, RedirectAttributes redirectAttributes) {
-		if (visit.getDate() != null && !visit.getDate().isAfter(LocalDate.now())) {
-			result.rejectValue("date", "typeMismatch.visitDate");
-		}
 
 		if (result.hasErrors()) {
 			return "pets/createOrUpdateVisitForm";
