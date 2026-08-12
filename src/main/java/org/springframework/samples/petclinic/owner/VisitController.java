@@ -16,9 +16,14 @@
 package org.springframework.samples.petclinic.owner;
 
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.Map;
 import java.util.Optional;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.WebDataBinder;
@@ -27,6 +32,7 @@ import org.springframework.web.bind.annotation.InitBinder;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import jakarta.validation.Valid;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
@@ -44,8 +50,11 @@ class VisitController {
 
 	private final OwnerRepository owners;
 
-	public VisitController(OwnerRepository owners) {
+	private final VisitRepository visits;
+
+	public VisitController(OwnerRepository owners, VisitRepository visits) {
 		this.owners = owners;
+		this.visits = visits;
 	}
 
 	@InitBinder
@@ -54,8 +63,9 @@ class VisitController {
 	}
 
 	/**
-	 * Called before each and every @RequestMapping annotated method. 2 goals: - Make sure
-	 * we always have fresh data - Since we do not use the session scope, make sure that
+	 * Called before each and every @RequestMapping annotated method. 2 goals:
+	 * - Make sure we always have fresh data
+	 * - Since we do not use the session scope, make sure that
 	 * Pet object always has an id (Even though id is not part of the form fields)
 	 * @param petId
 	 * @return Pet
@@ -109,6 +119,60 @@ class VisitController {
 		this.owners.save(owner);
 		redirectAttributes.addFlashAttribute("message", "Your visit has been booked");
 		return "redirect:/owners/{ownerId}";
+	}
+
+	@GetMapping("/owners/{ownerId}/pets/{petId}/visits")
+	public String showVisitHistory(@PathVariable int ownerId, @PathVariable int petId,
+			@RequestParam(defaultValue = "0") int page,
+			@RequestParam(defaultValue = "10") int size,
+			@RequestParam(defaultValue = "appointmentDate") String sort,
+			@RequestParam(defaultValue = "DESC") Sort.Direction direction,
+			Map<String, Object> model) {
+
+		Optional<Owner> optionalOwner = owners.findById(ownerId);
+		Owner owner = optionalOwner.orElseThrow(() -> new IllegalArgumentException(
+				"Owner not found with id: " + ownerId + ". Please ensure the ID is correct "));
+
+		Pet pet = owner.getPet(petId);
+		if (pet == null) {
+			throw new IllegalArgumentException(
+					"Pet with id " + petId + " not found for owner with id " + ownerId + ".");
+		}
+
+		Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sort));
+		Page<Visit> visitPage = visits.findByPetId(petId, pageable);
+
+		model.put("owner", owner);
+		model.put("pet", pet);
+		model.put("visits", visitPage.getContent());
+		model.put("currentPage", visitPage.getNumber());
+		model.put("totalPages", visitPage.getTotalPages());
+		model.put("totalVisits", visitPage.getTotalElements());
+		model.put("pageSize", visitPage.getSize());
+		model.put("sortColumn", sort);
+		model.put("sortDirection", direction);
+
+		return "pets/visitHistory";
+	}
+
+	@GetMapping(value = "/owners/{ownerId}/pets/{petId}/visits/export/csv")
+	public String exportVisitsCsv(@PathVariable int ownerId, @PathVariable int petId, Map<String, Object> model) {
+		Optional<Owner> optionalOwner = owners.findById(ownerId);
+		Owner owner = optionalOwner.orElseThrow(() -> new IllegalArgumentException(
+				"Owner not found with id: " + ownerId + ". Please ensure the ID is correct "));
+
+		Pet pet = owner.getPet(petId);
+		if (pet == null) {
+			throw new IllegalArgumentException(
+					"Pet with id " + petId + " not found for owner with id " + ownerId + ".");
+		}
+
+		Collection<Visit> allVisits = visits.findByPetId(petId);
+		model.put("owner", owner);
+		model.put("pet", pet);
+		model.put("visits", allVisits);
+
+		return "pets/visitHistoryCsv";
 	}
 
 }
