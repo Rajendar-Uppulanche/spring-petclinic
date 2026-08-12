@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+
+<html xmlns:th="https://www.thymeleaf.org" th:replace="~{fragments/layout :: layout (~{::body},'owners')}">
+
+<body>
+
+  <h2>
+    Visits
+  </h2>
+
+  <b th:text="#{pet}">Pet</b>
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <th th:text="#{name}">Name</th>
+        <th th:text="#{birthDate}">Birth Date</th>
+        <th th:text="#{type}">Type</th>
+        <th th:text="#{owner}">Owner</th>
+      </tr>
+    </thead>
+    <tr>
+      <td th:text="${pet.name}"></td>
+      <td th:text="${#temporals.format(pet.birthDate, 'yyyy-MM-dd')}"></td>
+      <td th:text="${pet.type}"></td>
+      <td th:text="${owner?.firstName + ' ' + owner?.lastName}"></td>
+    </tr>
+  </table>
+
+  <br />
+  <b th:text="#{visits}">Visits</b>
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <th th:text="#{date}">Date</th>
+        <th th:text="#{description}">Description</th>
+        <th th:text="#{checkInTime}">Check-in Time</th>
+        <th th:text="#{checkOutTime}">Check-out Time</th>
+        <th th:text="#{duration}">Duration</th>
+      </tr>
+    </thead>
+    <tr th:each="visit : ${pet.visits}">
+      <td th:text="${#temporals.format(visit.date, 'yyyy-MM-dd')}"></td>
+      <td th:text="${visit.description}"></td>
+      <td th:text="${visit.isCheckedIn() ? #temporals.format(visit.checkInTime, 'yyyy-MM-dd HH:mm') : '-'}"></td>
+      <td th:text="${visit.isCheckedOut() ? #temporals.format(visit.checkOutTime, 'yyyy-MM-dd HH:mm') : '-'}"></td>
+      <td th:text="${visit.isCheckedIn() ? (visit.isCheckedOut() ? visitDurations.get(#ids.indexOf(visit.id)) + ' mins' : 'In Progress') : '-'}"></td>
+    </tr>
+  </table>
+
+  <br />
+  <a class="btn btn-primary" th:href="@{/owners/{ownerId}/pets/{petId}/visits/new(ownerId=${owner.id},petId=${pet.id})}" th:text="#{addVisit}">Add Visit</a>
+  <a class="btn btn-outline-secondary" th:href="@{/owners/{ownerId}(ownerId=${owner.id})}" th:text="#{ownerDetails}">Owner Details</a>
+
+</body>
+
+</html>

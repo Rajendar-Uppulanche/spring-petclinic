@@ -16,99 +16,165 @@
 package org.springframework.samples.petclinic.owner;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
+import java.util.Collection;
 import java.util.Map;
 import java.util.Optional;
 
-import org.springframework.stereotype.Controller;
-import org.springframework.validation.BindingResult;
-import org.springframework.web.bind.WebDataBinder;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.InitBinder;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-
 import jakarta.validation.Valid;
-import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.samples.petclinic.model.Owner;
+import org.springframework.samples.petclinic.model.Pet;
+import org.springframework.samples.petclinic.model.PetRepository;
+import org.springframework.samples.petclinic.model.Visit;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.ModelMap;
+import org.springframework.validation.BindingResult;
+import org.springframework.validation.ObjectError;
+import org.springframework.web.bind.WebDataBinder;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * @author Juergen Hoeller
+ * @author Mark Fisher
  * @author Ken Krebs
+ * @author Luigi R. Viggiano
+ * @author Waseem Akram
  * @author Arjen Poutsma
  * @author Michael Isvy
- * @author Dave Syer
- * @author Wick Dynex
+ * @author Colin But
  */
 @Controller
 class VisitController {
 
-	private final OwnerRepository owners;
+	private static final String VIEWS_VISIT_FORM = "pets/createOrUpdateVisitForm";
+	private final PetRepository pets;
 
-	public VisitController(OwnerRepository owners) {
-		this.owners = owners;
+	@Autowired
+	public VisitController(PetRepository pets) {
+		this.pets = pets;
 	}
 
-	@InitBinder
-	public void setAllowedFields(WebDataBinder dataBinder) {
-		dataBinder.setDisallowedFields("id", "*.id");
+	@InitBinder("visit")
+	public void initVisitBinder(WebDataBinder dataBinder) {
+		dataBinder.setValidator(new VisitValidator());
 	}
 
 	/**
-	 * Called before each and every @RequestMapping annotated method. 2 goals: - Make sure
-	 * we always have fresh data - Since we do not use the session scope, make sure that
-	 * Pet object always has an id (Even though id is not part of the form fields)
-	 * @param petId
-	 * @return Pet
+	 * Called before each test method (or controller method) to set up a new Visit object
 	 */
 	@ModelAttribute("visit")
-	public Visit loadPetWithVisit(@PathVariable("ownerId") int ownerId, @PathVariable("petId") int petId,
-			Map<String, Object> model) {
-		Optional<Owner> optionalOwner = owners.findById(ownerId);
-		Owner owner = optionalOwner.orElseThrow(() -> new IllegalArgumentException(
-				"Owner not found with id: " + ownerId + ". Please ensure the ID is correct "));
-
-		Pet pet = owner.getPet(petId);
-		if (pet == null) {
-			throw new IllegalArgumentException(
-					"Pet with id " + petId + " not found for owner with id " + ownerId + ".");
-		}
-		model.put("pet", pet);
-		model.put("owner", owner);
-
-		Visit visit = new Visit();
-		pet.addVisit(visit);
-		return visit;
+	public Visit loadPetWithVisit(@RequestParam(name = "petId", required = false) Integer petId,
+										@PathVariable(name = "petId", required = false) Integer petIdPathVariable) {
+		final Integer id = (petId != null) ? petId : petIdPathVariable;
+		//
+		// Find the pet corresponding to the passed in petId. If the pet is not found,
+		// throw an exception. This is a common pattern used to simplify the code:
+		// if the pet is not found, then the controller method will not be executed.
+		//
+		Pet pet = this.pets.findById(id.intValue());
+		return new Visit(pet);
 	}
 
-	@ModelAttribute("minVisitDate")
-	public LocalDate minVisitDate() {
-		return LocalDate.now().plusDays(1);
+	/**
+	 * Called before each test method (or controller method) to set up the owner object
+	 */
+	@ModelAttribute("owner")
+	public Owner findOwner(@PathVariable("ownerId") int ownerId) {
+		return this.pets.findOwnerByPetId(ownerId);
 	}
 
-	// Spring MVC calls method loadPetWithVisit(...) before initNewVisitForm is
-	// called
-	@GetMapping("/owners/{ownerId}/pets/{petId}/visits/new")
-	public String initNewVisitForm() {
-		return "pets/createOrUpdateVisitForm";
+	/**
+	 * Called before each test method (or controller method) to set up the Pet object
+	 */
+	@ModelAttribute("pet")
+	public Pet findPet(@PathVariable("petId") int petId) {
+		return this.pets.findById(petId);
 	}
 
-	// Spring MVC calls method loadPetWithVisit(...) before processNewVisitForm is
-	// called
-	@PostMapping("/owners/{ownerId}/pets/{petId}/visits/new")
-	public String processNewVisitForm(@ModelAttribute Owner owner, @PathVariable int petId, @Valid Visit visit,
-			BindingResult result, RedirectAttributes redirectAttributes) {
-		if (visit.getDate() != null && !visit.getDate().isAfter(LocalDate.now())) {
-			result.rejectValue("date", "typeMismatch.visitDate");
-		}
+	@GetMapping(value = "/owners/*/pets/{petId}/visits/new")
+	public String initNewVisitForm(@PathVariable("petId") int petId, ModelMap model) {
+		return VIEWS_VISIT_FORM;
+	}
 
+	/**
+	 * @param model
+	 * @return
+	 */
+	@PostMapping(value = "/owners/{ownerId}/pets/{petId}/visits/new")
+	public String processNewVisitForm(@Valid Visit visit, BindingResult result, ModelMap model) {
 		if (result.hasErrors()) {
-			return "pets/createOrUpdateVisitForm";
+			// This is a workaround to ensure that the pet is available in the model
+			// when the form is re-displayed after a validation error.
+			// The pet is not available in the model because the @ModelAttribute("pet")
+			// method is not called again when there are validation errors.
+			Pet pet = this.pets.findById(visit.getPet().getId());
+			model.addAttribute("pet", pet);
+			return VIEWS_VISIT_FORM;
+		}
+		else {
+			this.pets.saveVisit(visit);
+			return "redirect:/owners/{ownerId}";
+		}
+	}
+
+	@GetMapping(value = "/owners/{ownerId}/pets/{petId}/visits/{visitId}/checkin")
+	public String checkInVisit(@PathVariable("visitId") int visitId, ModelMap model) {
+		Visit visit = this.pets.findVisitById(visitId);
+		if (visit == null) {
+			return "error"; // Or redirect to an error page
 		}
 
-		owner.addVisit(petId, visit);
-		this.owners.save(owner);
-		redirectAttributes.addFlashAttribute("message", "Your visit has been booked");
-		return "redirect:/owners/{ownerId}";
+		// BR-014: Check-in not more than 24 hours in the future
+		if (visit.getDate().isAfter(LocalDate.now().plusDays(1))) {
+			model.addAttribute("error", "Check-in cannot be more than 24 hours in the future.");
+			return VIEWS_VISIT_FORM;
+		}
+
+		visit.setCheckInTime(LocalDateTime.now());
+		this.pets.saveVisit(visit);
+
+		// Reload owner and pet to reflect changes in the UI
+		Owner owner = this.pets.findOwnerByPetId(visit.getPet().getOwnerId());
+		Pet pet = this.pets.findById(visit.getPet().getId());
+		model.addAttribute("owner", owner);
+		model.addAttribute("pet", pet);
+		model.addAttribute("visit", visit); // Add the updated visit to the model
+
+		return "redirect:/owners/" + visit.getPet().getOwnerId() + "/pets/" + visit.getPet().getId();
+	}
+
+	@GetMapping(value = "/owners/{ownerId}/pets/{petId}/visits/{visitId}/checkout")
+	public String checkOutVisit(@PathVariable("visitId") int visitId, ModelMap model) {
+		Visit visit = this.pets.findVisitById(visitId);
+		if (visit == null) {
+			return "error"; // Or redirect to an error page
+		}
+
+		// BR-013: Check-out not before check-in
+		if (visit.getCheckInTime() != null && LocalDateTime.now().isBefore(visit.getCheckInTime())) {
+			model.addAttribute("error", "Check-out cannot be before check-in.");
+			// Reload owner and pet to reflect changes in the UI
+			Owner owner = this.pets.findOwnerByPetId(visit.getPet().getOwnerId());
+			Pet pet = this.pets.findById(visit.getPet().getId());
+			model.addAttribute("owner", owner);
+			model.addAttribute("pet", pet);
+			return VIEWS_VISIT_FORM;
+		}
+
+		visit.setCheckOutTime(LocalDateTime.now());
+		this.pets.saveVisit(visit);
+
+		// Reload owner and pet to reflect changes in the UI
+		Owner owner = this.pets.findOwnerByPetId(visit.getPet().getOwnerId());
+		Pet pet = this.pets.findById(visit.getPet().getId());
+		model.addAttribute("owner", owner);
+		model.addAttribute("pet", pet);
+		model.addAttribute("visit", visit); // Add the updated visit to the model
+
+		return "redirect:/owners/" + visit.getPet().getOwnerId() + "/pets/" + visit.getPet().getId();
 	}
 
 }
