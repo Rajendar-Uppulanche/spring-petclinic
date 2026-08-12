@@ -15,7 +15,10 @@
  */
 package org.springframework.samples.petclinic.owner;
 
+import java.time.Duration;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.samples.petclinic.model.BaseEntity;
@@ -30,6 +33,7 @@ import jakarta.validation.constraints.NotBlank;
  *
  * @author Ken Krebs
  * @author Dave Syer
+ * @author Synapse Builder
  */
 @Entity
 @Table(name = "visits")
@@ -41,6 +45,12 @@ public class Visit extends BaseEntity {
 
 	@NotBlank
 	private String description;
+
+	@Column(name = "check_in_time")
+	private LocalDateTime checkInTime;
+
+	@Column(name = "check_out_time")
+	private LocalDateTime checkOutTime;
 
 	/**
 	 * Creates a new instance of Visit for tomorrow
@@ -63,6 +73,56 @@ public class Visit extends BaseEntity {
 
 	public void setDescription(String description) {
 		this.description = description;
+	}
+
+	public LocalDateTime getCheckInTime() {
+		return checkInTime;
+	}
+
+	public void setCheckInTime(LocalDateTime checkInTime) {
+		this.checkInTime = checkInTime;
+	}
+
+	public LocalDateTime getCheckOutTime() {
+		return checkOutTime;
+	}
+
+	public void setCheckOutTime(LocalDateTime checkOutTime) {
+		this.checkOutTime = checkOutTime;
+	}
+
+	/**
+	 * Calculates the duration of the visit if both check-in and check-out times are present.
+	 * Returns "In Progress" if only check-in time is present.
+	 * Returns null if neither is present.
+	 * @return Formatted duration string (HH:MM), "In Progress", or null.
+	 */
+	public String getDurationFormatted() {
+		if (checkInTime != null && checkOutTime != null) {
+			Duration duration = Duration.between(checkInTime, checkOutTime);
+			long hours = duration.toHours();
+			long minutes = duration.toMinutes() % 60;
+			return String.format("%02d:%02d", hours, minutes);
+		} else if (checkInTime != null) {
+			return "In Progress";
+		}
+		return null;
+	}
+
+	/**
+	 * Helper to check if the visit has been checked in.
+	 * @return true if check-in time is set, false otherwise.
+	 */
+	public boolean isCheckedIn() {
+		return this.checkInTime != null;
+	}
+
+	/**
+	 * Helper to check if the visit has been checked out.
+	 * @return true if check-out time is set, false otherwise.
+	 */
+	public boolean isCheckedOut() {
+		return this.checkOutTime != null;
 	}
 
 }
