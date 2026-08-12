@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+
+<html xmlns:th="https://www.thymeleaf.org" th:replace="~{fragments/layout :: layout (~{::body},'visits')}">
+
+<body>
+
+  <h2>Visits</h2>
+
+  <form th:action="@{/visits}" method="get" class="form-horizontal">
+    <div class="form-group">
+      <label class="col-sm-2 control-label" th:text="#{fromDate}">From Date</label>
+      <div class="col-sm-10">
+        <input class="form-control" name="fromDate" th:value="${fromDate}" type="date"/>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="col-sm-2 control-label" th:text="#{toDate}">To Date</label>
+      <div class="col-sm-10">
+        <input class="form-control" name="toDate" th:value="${toDate}" type="date"/>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="col-sm-2 control-label" th:text="#{keyword}">Keyword</label>
+      <div class="col-sm-10">
+        <input class="form-control" name="keyword" th:value="${keyword}" type="text"/>
+      </div>
+    </div>
+    <div class="form-group">
+      <div class="col-sm-offset-2 col-sm-10">
+        <button class="btn btn-primary" type="submit" th:text="#{filterVisits}">Filter Visits</button>
+        <a class="btn btn-primary" th:href="@{/visits}" th:text="#{clearFilters}">Clear Filters</a>
+      </div>
+    </div>
+  </form>
+
+  <br/>
+  <table class="table table-striped">
+    <tr>
+      <th th:text="#{date}">Date</th>
+      <th th:text="#{description}">Description</th>
+      <th th:text="#{pet}">Pet</th>
+      <th th:text="#{owner}">Owner</th>
+    </tr>
+    <tr th:each="visit : ${visits}">
+      <td th:text="${#temporals.format(visit.date, 'yyyy-MM-dd')}"></td>
+      <td th:text=" ${visit.description}"></td>
+      <td th:text=" ${visit.pet.name}"></td>
+      <td th:text=" ${visit.owner.firstName + ' ' + visit.owner.lastName}"></td>
+    </tr>
+    <tr th:if="${visits.empty}">
+      <td colspan="4" th:text="#{noVisitsFound}">No visits found for the selected filters.</td>
+    </tr>
+  </table>
+
+</body>
+
+</html>

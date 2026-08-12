@@ -16,6 +16,7 @@
 package org.springframework.samples.petclinic.owner;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -27,6 +28,7 @@ import org.springframework.web.bind.annotation.InitBinder;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import jakarta.validation.Valid;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
@@ -44,8 +46,11 @@ class VisitController {
 
 	private final OwnerRepository owners;
 
-	public VisitController(OwnerRepository owners) {
+	private final VisitRepository visits;
+
+	public VisitController(OwnerRepository owners, VisitRepository visits) {
 		this.owners = owners;
+		this.visits = visits;
 	}
 
 	@InitBinder
@@ -109,6 +114,26 @@ class VisitController {
 		this.owners.save(owner);
 		redirectAttributes.addFlashAttribute("message", "Your visit has been booked");
 		return "redirect:/owners/{ownerId}";
+	}
+
+	@GetMapping(value = {"/visits", "/owners/*/pets/visits"})
+	public String showVisitList(@RequestParam(name = "fromDate", required = false) LocalDate fromDate,
+			@RequestParam(name = "toDate", required = false) LocalDate toDate,
+			@RequestParam(name = "keyword", required = false) String keyword,
+			Map<String, Object> model) {
+
+		List<Visit> visitsList;
+		if (fromDate != null || toDate != null || keyword != null) {
+			visitsList = this.visits.findByDateBetweenOrDescriptionContainingIgnoreCase(fromDate,
+					ttoDate, keyword);
+		} else {
+			visitsList = this.visits.findAll();
+		}
+		model.put("visits", visitsList);
+		model.put("fromDate", fromDate);
+		model.put("toDate", toDate);
+		model.put("keyword", keyword);
+		return "visits/visitList";
 	}
 
 }
