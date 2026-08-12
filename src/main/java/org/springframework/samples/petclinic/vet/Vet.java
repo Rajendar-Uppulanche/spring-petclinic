@@ -71,4 +71,15 @@ public class Vet extends Person {
 		getSpecialtiesInternal().add(specialty);
 	}
 
+	// New field for specialities collection
+	private Set<String> specialityNames = new HashSet<>();
+
+	public Set<String> getSpecialityNames() {
+		return specialityNames;
+	}
+
+	public void setSpecialityNames(Set<String> specialityNames) {
+		this.specialityNames = specialityNames;
+	}
+
 }
