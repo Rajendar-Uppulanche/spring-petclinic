@@ -1,0 +1,34 @@
+/* src/main/resources/static/resources/js/visits/visit-history.component.css */
+.sortable {
+    cursor: pointer;
+}
+
+.sortable:hover {
+    color: #007bff; /* Bootstrap primary color */
+}
+
+.pagination .page-item.active .page-link {
+    background-color: #007bff;
+    border-color: #007bff;
+    color: white;
+}
+
+.pagination .page-item .page-link {
+    color: #007bff;
+}
+
+.pagination .page-item.disabled .page-link {
+    color: #6c757d;
+}
+
+/* Styling for the page size dropdown */
+.form-select-sm {
+    padding-top: 0.25rem;
+    padding-bottom: 0.25rem;
+    padding-left: 0.5rem;
+    font-size: 0.875rem;
+}
+
+.w-auto {
+    width: auto !important;
+}
