@@ -28,11 +28,19 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledInNativeImage;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.boot.webmvc.test.context.MockMvcTest;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.FilterType;
+import org.springframework.samples.petclinic.model.Owner;
+import org.springframework.samples.petclinic.model.Pet;
+import org.springframework.samples.petclinic.model.Visit;
 import org.springframework.test.context.aot.DisabledInAotMode;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Optional;
 
 /**
@@ -41,7 +49,9 @@ import java.util.Optional;
  * @author Colin But
  * @author Wick Dynex
  */
-@WebMvcTest(VisitController.class)
+@WebMvcTest(value = VisitController.class,
+		includeFilters = @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE,
+				classes = {OwnerRepository.class, VisitRepository.class}))
 @DisabledInNativeImage
 @DisabledInAotMode
 class VisitControllerTests {
@@ -56,12 +66,23 @@ class VisitControllerTests {
 	@MockitoBean
 	private OwnerRepository owners;
 
+	@MockitoBean
+	private VisitRepository visits;
+
+	private Owner owner;
+
 	@BeforeEach
 	void init() {
-		Owner owner = new Owner();
+		owner = new Owner();
 		Pet pet = new Pet();
-		owner.addPet(pet);
+		owner.setFirstName("George");
+		owner.setLastName("Franklin");
+		owner.setId(TEST_OWNER_ID);
+		pet.setOwner(owner);
 		pet.setId(TEST_PET_ID);
+		pet.setName("Leo");
+		owner.addPet(pet);
+
 		given(this.owners.findById(TEST_OWNER_ID)).willReturn(Optional.of(owner));
 	}
 
@@ -88,7 +109,7 @@ class VisitControllerTests {
 		mockMvc
 			.perform(post("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, TEST_PET_ID).param("name",
 					"George"))
-			.andExpect(model().attributeHasErrors("visit"))
+			.andExpect(model().attributeHasErrors("visit")),
 			.andExpect(status().isOk())
 			.andExpect(view().name("pets/createOrUpdateVisitForm"));
 	}
@@ -100,10 +121,40 @@ class VisitControllerTests {
 				.param("name", "George")
 				.param("date", LocalDate.now().toString())
 				.param("description", "Visit Description"))
-			.andExpect(model().attributeHasFieldErrors("visit", "date"))
-			.andExpect(model().attributeHasFieldErrorCode("visit", "date", "typeMismatch.visitDate"))
+			.andExpect(model().attributeHasFieldErrors("visit", "date")),
+			.andExpect(model().attributeHasFieldErrorCode("visit", "date", "typeMismatch.visitDate")),
 			.andExpect(status().isOk())
 			.andExpect(view().name("pets/createOrUpdateVisitForm"));
+	}
+
+	@Test
+	void showVisitList() throws Exception {
+		mockMvc.perform(get("/visits"))
+			.andExpect(status().isOk())
+			.andExpect(view().name("visits/visitList"));
+	}
+
+	@Test
+	void showVisitListWithDateFilter() throws Exception {
+		LocalDate fromDate = LocalDate.now().minusDays(10);
+		LocalDate toDate = LocalDate.now();
+		mockMvc.perform(get("/visits?from_date=").param("from_date", fromDate.toString()).param("to_date", toDate.toString()))
+			.andExpect(status().isOk())
+			.andExpect(view().name("visits/visitList"));
+	}
+
+	@Test
+	void showVisitListWithKeywordFilter() throws Exception {
+		mockMvc.perform(get("/visits?keyword=test"))
+			.andExpect(status().isOk())
+			.andExpect(view().name("visits/visitList"));
+	}
+
+	@Test
+	void showVisitListWithInvalidDateRange() throws Exception {
+		mockMvc.perform(get("/visits?from_date=").param("from_date", LocalDate.now().toString()).param("to_date", LocalDate.now().minusDays(1).toString()))
+			.andExpect(status().isOk())
+			.andExpect(view().name("visits/visitList"));
 	}
 
 }
