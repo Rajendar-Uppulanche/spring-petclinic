@@ -16,9 +16,13 @@
 package org.springframework.samples.petclinic.owner;
 
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.Map;
 import java.util.Optional;
 
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.WebDataBinder;
@@ -27,9 +31,11 @@ import org.springframework.web.bind.annotation.InitBinder;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import jakarta.validation.Valid;
-import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 /**
  * @author Juergen Hoeller
@@ -44,8 +50,14 @@ class VisitController {
 
 	private final OwnerRepository owners;
 
-	public VisitController(OwnerRepository owners) {
+	private final VisitRepository visits;
+
+	private final VisitService visitService;
+
+	public VisitController(OwnerRepository owners, VisitRepository visits, VisitService visitService) {
 		this.owners = owners;
+		this.visits = visits;
+		this.visitService = visitService;
 	}
 
 	@InitBinder
@@ -109,6 +121,53 @@ class VisitController {
 		this.owners.save(owner);
 		redirectAttributes.addFlashAttribute("message", "Your visit has been booked");
 		return "redirect:/owners/{ownerId}";
+	}
+
+	@GetMapping("/owners/{ownerId}/pets/{petId}/visits")
+	public String showPetVisits(@PathVariable int ownerId, @PathVariable int petId, Map<String, Object> model,
+			@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int size,
+			@RequestParam(defaultValue = "appointmentDate") String sort,
+			@RequestParam(defaultValue = "desc") String direction) {
+
+		Owner owner = this.owners.findById(ownerId)
+				.orElseThrow(() -> new IllegalArgumentException("Owner not found with id: " + ownerId));
+		Pet pet = owner.getPet(petId);
+		if (pet == null) {
+			throw new IllegalArgumentException("Pet with id " + petId + " not found for owner with id " + ownerId);
+		}
+
+		model.put("pet", pet);
+		model.put("owner", owner);
+
+		VisitPage visits = this.visitService.findVisitsByPetId(petId, page, size, sort, direction);
+		model.put("visits", visits);
+		model.put("currentPage", page);
+		model.put("pageSize", size);
+		model.put("sort", sort);
+		model.put("direction", direction);
+
+		return "pets/visitList";
+	}
+
+	@GetMapping(value = "/owners/{ownerId}/pets/{petId}/visits/export", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
+	@ResponseBody
+	public ResponseEntity<byte[]> exportPetVisits(@PathVariable int ownerId, @PathVariable int petId) {
+		Owner owner = this.owners.findById(ownerId)
+				.orElseThrow(() -> new IllegalArgumentException("Owner not found with id: " + ownerId));
+		Pet pet = owner.getPet(petId);
+		if (pet == null) {
+			throw new IllegalArgumentException("Pet with id " + petId + " not found for owner with id " + ownerId);
+		}
+
+		Collection<Visit> visits = this.visits.findByPetId(petId);
+		byte[] csvBytes = this.visitService.exportVisitsAsCsv(pet.getName(), visits);
+
+		String filename = this.visitService.generateCsvFilename(pet.getName());
+		HttpHeaders headers = new HttpHeaders();
+		headers.setContentDispositionFormData("attachment", filename);
+		headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+
+		return ResponseEntity.ok().headers(headers).body(csvBytes);
 	}
 
 }
