@@ -44,8 +44,11 @@ class VisitController {
 
 	private final OwnerRepository owners;
 
-	public VisitController(OwnerRepository owners) {
+	private VisitRepository visitRepository;
+
+	public VisitController(OwnerRepository owners, VisitRepository visitRepository) {
 		this.owners = owners;
+		this.visitRepository = visitRepository;
 	}
 
 	@InitBinder
@@ -54,14 +57,16 @@ class VisitController {
 	}
 
 	/**
-	 * Called before each and every @RequestMapping annotated method. 2 goals: - Make sure
-	 * we always have fresh data - Since we do not use the session scope, make sure that
-	 * Pet object always has an id (Even though id is not part of the form fields)
+	 * Called before each and every @RequestMapping annotated method. 2 goals:
+	 * - Make sure we always have fresh data
+	 * - Since we do not use the session scope, make sure that Pet object always has an
+	 * id (Even though id is not part of the form fields)
 	 * @param petId
 	 * @return Pet
 	 */
 	@ModelAttribute("visit")
-	public Visit loadPetWithVisit(@PathVariable("ownerId") int ownerId, @PathVariable("petId") int petId,
+	public Visit loadPetWithVisit(@PathVariable("ownerId") int ownerId,
+			@PathVariable("petId") int petId,
 			Map<String, Object> model) {
 		Optional<Owner> optionalOwner = owners.findById(ownerId);
 		Owner owner = optionalOwner.orElseThrow(() -> new IllegalArgumentException(
@@ -95,8 +100,11 @@ class VisitController {
 	// Spring MVC calls method loadPetWithVisit(...) before processNewVisitForm is
 	// called
 	@PostMapping("/owners/{ownerId}/pets/{petId}/visits/new")
-	public String processNewVisitForm(@ModelAttribute Owner owner, @PathVariable int petId, @Valid Visit visit,
-			BindingResult result, RedirectAttributes redirectAttributes) {
+	public String processNewVisitForm(@ModelAttribute Owner owner,
+			@PathVariable int petId,
+			@Valid Visit visit,
+			BindingResult result,
+			RedirectAttributes redirectAttributes) {
 		if (visit.getDate() != null && !visit.getDate().isAfter(LocalDate.now())) {
 			result.rejectValue("date", "typeMismatch.visitDate");
 		}
@@ -109,6 +117,44 @@ class VisitController {
 		this.owners.save(owner);
 		redirectAttributes.addFlashAttribute("message", "Your visit has been booked");
 		return "redirect:/owners/{ownerId}";
+	}
+
+	@GetMapping("/visits")
+	public String showVisits(@ModelAttribute("visitSearchCriteria") VisitSearchCriteria visitSearchCriteria,
+			org.springframework.ui.Model model) {
+
+		model.addAttribute("selections", getSelectionDetails());
+		model.addAttribute("visits", visitRepository.findAllVisits(visitSearchCriteria));
+		return "visits/visitList";
+	}
+
+	@GetMapping("/visits/new")
+	public String initNewVisitForm(@RequestParam(name = "petId", required = false) Integer petId,
+			org.springframework.ui.Model model) {
+		Visit visit = new Visit();
+		model.addAttribute("visit", visit);
+		if (petId != null) {
+			Pet pet = this.owners.findPetById(petId);
+			pet.addVisit(visit);
+			model.addAttribute("pet", pet);
+		}
+		return "pets/createOrUpdateVisitForm";
+	}
+
+	@PostMapping("/visits/new")
+	public String processNewVisitForm(@Valid Visit visit,
+			BindingResult result,
+			RedirectAttributes redirectAttributes) {
+		if (result.hasErrors()) {
+			return "pets/createOrUpdateVisitForm";
+		}
+		this.visitRepository.save(visit);
+		redirectAttributes.addFlashAttribute("message", "Your visit has been booked");
+		return "redirect:/visits";
+	}
+
+	private Map<String, String> getSelectionDetails() {
+		return Map.of("owner", "Owner", "pet", "Pet", "visit", "Visit");
 	}
 
 }
