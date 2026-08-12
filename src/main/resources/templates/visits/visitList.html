@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+
+<html xmlns:th="https://www.thymeleaf.org" th:replace="~{fragments/layout :: layout (~{::body},'visits')}">
+
+<body>
+
+  <h2>Visit History</h2>
+
+  <form method="GET" class="form-horizontal">
+    <div class="form-group">
+      <div class="col-sm-2">
+        <label for="from_date">From Date</label>
+        <input type="date" id="from_date" name="from_date" th:value="${from_date}" class="form-control" />
+      </div>
+      <div class="col-sm-2">
+        <label for="to_date">To Date</label>
+        <input type="date" id="to_date" name="to_date" th:value="${to_date}" class="form-control" />
+      </div>
+      <div class="col-sm-4">
+        <label for="keyword">Keyword Search</label>
+        <input type="text" id="keyword" name="keyword" th:value="${keyword}" class="form-control" placeholder="Enter description keyword" />
+      </div>
+      <div class="col-sm-2">
+        <button type="submit" class="btn btn-primary" style="margin-top: 25px;">Filter</button>
+      </div>
+      <div class="col-sm-2">
+        <a th:href="@{/visits}" class="btn btn-secondary" style="margin-top: 25px;">Clear Filters</a>
+      </div>
+    </div>
+  </form>
+
+  <br />
+
+  <div th:if="${message}" class="alert alert-danger">
+    <p th:text="${message}"></p>
+  </div>
+
+  <div th:if="${!visits.empty}">
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th th:text="#{date}">Date</th>
+          <th th:text="#{description}">Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr th:each="visit : ${visits}">
+          <td th:text="${#temporals.format(visit.date, 'yyyy-MM-dd')}"></td>
+          <td th:text="${visit.description}"></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <div th:if="${visits.empty}">
+    <p>No visits found for the selected filters.</p>
+  </div>
+
+</body>
+
+</html>
