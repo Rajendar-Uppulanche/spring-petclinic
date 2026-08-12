@@ -15,23 +15,16 @@
  */
 package org.springframework.samples.petclinic.owner;
 
-import java.time.LocalDate;
-import java.util.Collection;
-import java.util.LinkedHashSet;
+import org.springframework.beans.support.MutablePropertyValues;
+import org.springframework.core.style.StylerUtils;
+import org.springframework.util.ClassUtils;
+
+import javax.persistence.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
-
-import org.springframework.format.annotation.DateTimeFormat;
-import org.springframework.samples.petclinic.model.NamedEntity;
-
-import jakarta.persistence.CascadeType;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.OrderBy;
-import jakarta.persistence.Table;
 
 /**
  * Simple business object representing a pet.
@@ -39,31 +32,62 @@ import jakarta.persistence.Table;
  * @author Ken Krebs
  * @author Juergen Hoeller
  * @author Sam Brannen
- * @author Wick Dynex
  */
 @Entity
 @Table(name = "pets")
 public class Pet extends NamedEntity {
 
-	@Column
-	@DateTimeFormat(pattern = "yyyy-MM-dd")
+	@Column(name = "birth_date")
 	private LocalDate birthDate;
 
-	@ManyToOne
+	@ManyToOne(fetch = FetchType.EAGER)
+	@JoinColumn(name = "owner_id")
+	private Owner owner;
+
+	@ManyToOne(fetch = FetchType.EAGER)
 	@JoinColumn(name = "type_id")
 	private PetType type;
 
-	@OneToMany(cascade = CascadeType.ALL, fetch = FetchType.EAGER)
-	@JoinColumn(name = "pet_id")
-	@OrderBy("date ASC")
-	private final Set<Visit> visits = new LinkedHashSet<>();
+	@OneToMany(mappedBy = "pet", cascade = CascadeType.ALL, orphanRemoval = true)
+	private Set<Visit> visits = new HashSet<>();
+
+	// Transient field to hold the calculated age
+	@Transient
+	private String age;
+
+	public LocalDate getBirthDate() {
+		return this.birthDate;
+	}
 
 	public void setBirthDate(LocalDate birthDate) {
 		this.birthDate = birthDate;
 	}
 
-	public LocalDate getBirthDate() {
-		return this.birthDate;
+	public boolean isNew() {
+		return this.id == null;
+	}
+
+	public Owner getOwner() {
+		return this.owner;
+	}
+
+	protected void setOwner(Owner owner) {
+		this.owner = owner;
+	}
+
+	public void addVisit(Visit visit) {
+		getVisitsInternal().add(visit);
+		visit.setPet(this);
+	}
+
+	public List<Visit> getVisits() {
+		List<Visit> sortedVisits = new ArrayList<>(getVisitsInternal());
+		// Collections.sort(sortedVisits, new Visit.VisitComparator()); // Assuming Visit.VisitComparator exists
+		return sortedVisits;
+	}
+
+	protected Set<Visit> getVisitsInternal() {
+		return this.visits;
 	}
 
 	public PetType getType() {
@@ -74,12 +98,35 @@ public class Pet extends NamedEntity {
 		this.type = type;
 	}
 
-	public Collection<Visit> getVisits() {
-		return this.visits;
+	public String getAge() {
+		return age;
 	}
 
-	public void addVisit(Visit visit) {
-		getVisits().add(visit);
+	public void setAge(String age) {
+		this.age = age;
+	}
+
+	@Override
+	public String toString() {
+		return StylerUtils.style(this);
+	}
+
+	@Override
+	public MutablePropertyValues getPropertyValues() {
+		MutablePropertyValues propertyValues = super.getPropertyValues();
+		propertyValues.addPropertyValue("birthDate", this.birthDate);
+		propertyValues.addPropertyValue("type", this.type);
+		return propertyValues;
+	}
+
+	@Override
+	public String toStringOf() {
+		return "birthDate=" + StylerUtils.shortStyle(this.birthDate) + ", type=" + this.type;
+	}
+
+	@Override
+	public String getObjectClassName() {
+		return ClassUtils.getShortName(getClass());
 	}
 
 }
