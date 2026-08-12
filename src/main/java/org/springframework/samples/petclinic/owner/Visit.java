@@ -16,6 +16,7 @@
 package org.springframework.samples.petclinic.owner;
 
 import java.time.LocalDate;
+import java.util.List;
 
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.samples.petclinic.model.BaseEntity;
@@ -42,6 +43,12 @@ public class Visit extends BaseEntity {
 	@NotBlank
 	private String description;
 
+	@Column(name = "diagnosis_code", length = 10)
+	private String diagnosisCode;
+
+	@Column(name = "treatment_tags")
+	private List<String> treatmentTags;
+
 	/**
 	 * Creates a new instance of Visit for tomorrow
 	 */
@@ -63,6 +70,22 @@ public class Visit extends BaseEntity {
 
 	public void setDescription(String description) {
 		this.description = description;
+	}
+
+	public String getDiagnosisCode() {
+		return diagnosisCode;
+	}
+
+	public void setDiagnosisCode(String diagnosisCode) {
+		this.diagnosisCode = diagnosisCode;
+	}
+
+	public List<String> getTreatmentTags() {
+		return treatmentTags;
+	}
+
+	public void setTreatmentTags(List<String> treatmentTags) {
+		this.treatmentTags = treatmentTags;
 	}
 
 }
