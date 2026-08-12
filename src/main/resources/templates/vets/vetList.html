@@ -17,8 +17,10 @@
       <tr th:each="vet : ${listVets}">
         <td th:text="${vet.firstName + ' ' + vet.lastName}"></td>
         <td>
-          <span th:each="specialty : ${vet.specialties}" th:text="${specialty.name + ' '}" /> <span
-            th:if="${vet.nrOfSpecialties == 0}" th:text="#{none}">none</span>
+          <span th:if="${vet.specialityNames != null and !vet.specialityNames.empty}">
+            <span th:each="specialityName : ${vet.specialityNames}" class="speciality-badge" th:style="'background-color:' + #{getSpecialityColor(specialityName)} + '; color: white; padding: 5px 10px; border-radius: 5px; font-size: 0.8em; margin-right: 5px;'" th:text="${specialityName}"></span>
+          </span>
+          <span th:if="${vet.specialityNames == null or vet.specialityNames.empty}" class="speciality-badge" th:style="'background-color: #cccccc; color: black; padding: 5px 10px; border-radius: 5px; font-size: 0.8em; margin-right: 5px;'" th:text="#{generalPractice}">General Practice</span>
         </td>
       </tr>
     </tbody>
