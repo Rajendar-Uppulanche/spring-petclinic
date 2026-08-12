@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+
+<html xmlns:th="https://www.thymeleaf.org" th:replace="~{fragments/layout :: layout (~{::body},'visits')}">
+
+<body>
+
+  <h2>Visits</h2>
+
+  <form th:action="@{/visits}" method="get" class="form-inline">
+    <div class="form-group">
+      <label for="from">From Date</label>
+      <input type="date" id="from" name="from" th:value="${from}" class="form-control" />
+    </div>
+    <div class="form-group">
+      <label for="to">To Date</label>
+      <input type="date" id="to" name="to" th:value="${to}" class="form-control" />
+    </div>
+    <div class="form-group">
+      <label for="keyword">Keyword</label>
+      <input type="text" id="keyword" name="keyword" th:value="${keyword}" class="form-control" placeholder="Search description" />
+    </div>
+    <button type="submit" class="btn btn-primary">Filter</button>
+    <a th:href="@{/visits}" class="btn btn-secondary">Clear Filters</a>
+  </form>
+
+  <br />
+
+  <div th:if="${error}" class="alert alert-danger" role="alert">
+    <span th:text="${error}">Error message</span>
+  </div>
+
+  <div th:if="${#lists.isEmpty(visits)}" class="alert alert-warning" role="alert">
+    <strong>No visits found for the selected filters.</strong>
+  </div>
+
+  <table th:if="${!#lists.isEmpty(visits)}" class="table table-striped">
+    <thead>
+      <tr>
+        <th>Visit Date</th>
+        <th>Description</th>
+        <th>Pet ID</th>
+        <th>Owner ID</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr th:each="visit : ${visits}">
+        <td th:text="${#temporals.format(visit.date, 'yyyy-MM-dd')}"></td>
+        <td th:text="${visit.description}"></td>
+        <td th:text="${visit.pet.id}"></td>
+        <td th:text="${visit.pet.owner.id}"></td>
+      </tr>
+    </tbody>
+  </table>
+
+</body>
+
+</html>

@@ -28,11 +28,18 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledInNativeImage;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.FilterType;
+import org.springframework.samples.petclinic.model.Owner;
+import org.springframework.samples.petclinic.model.Pet;
+import org.springframework.samples.petclinic.model.PetType;
+import org.springframework.samples.petclinic.model.Visit;
 import org.springframework.test.context.aot.DisabledInAotMode;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Optional;
 
 /**
@@ -41,7 +48,9 @@ import java.util.Optional;
  * @author Colin But
  * @author Wick Dynex
  */
-@WebMvcTest(VisitController.class)
+@WebMvcTest(value = VisitController.class,
+		includeFilters = @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE,
+				classes = {OwnerRepository.class, VisitRepository.class}))
 @DisabledInNativeImage
 @DisabledInAotMode
 class VisitControllerTests {
@@ -56,12 +65,32 @@ class VisitControllerTests {
 	@MockitoBean
 	private OwnerRepository owners;
 
+	@MockitoBean
+	private VisitRepository visits;
+
+	private Owner owner;
+
 	@BeforeEach
 	void init() {
-		Owner owner = new Owner();
+		owner = new Owner();
+		owner.setId(TEST_OWNER_ID);
+		owner.setFirstName("John");
+		owner.setLastName("Doe");
+		owner.setEmail("john.doe@example.com");
+		owner.setAddress("123 Main St");
+		owner.setCity("Anytown");
+		owner.setTelephone("1234567890");
+
 		Pet pet = new Pet();
-		owner.addPet(pet);
 		pet.setId(TEST_PET_ID);
+		pet.setName("Buddy");
+		pet.setBirthDate(LocalDate.of(2018, 1, 1));
+		PetType petType = new PetType();
+		petType.setId(1);
+		petType.setName("dog");
+		pet.setType(petType);
+		owner.addPet(pet);
+
 		given(this.owners.findById(TEST_OWNER_ID)).willReturn(Optional.of(owner));
 	}
 
@@ -76,7 +105,7 @@ class VisitControllerTests {
 	void processNewVisitFormSuccess() throws Exception {
 		mockMvc
 			.perform(post("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, TEST_PET_ID)
-				.param("name", "George")
+				.param("name", "George") // This is actually pet name, not visit name
 				.param("date", LocalDate.now().plusDays(1).toString())
 				.param("description", "Visit Description"))
 			.andExpect(status().is3xxRedirection())
@@ -87,7 +116,7 @@ class VisitControllerTests {
 	void processNewVisitFormHasErrors() throws Exception {
 		mockMvc
 			.perform(post("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, TEST_PET_ID).param("name",
-					"George"))
+					"George")) // This is actually pet name, not visit name
 			.andExpect(model().attributeHasErrors("visit"))
 			.andExpect(status().isOk())
 			.andExpect(view().name("pets/createOrUpdateVisitForm"));
@@ -97,13 +126,66 @@ class VisitControllerTests {
 	void processNewVisitFormHasErrorsWhenVisitDateIsNotInFuture() throws Exception {
 		mockMvc
 			.perform(post("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, TEST_PET_ID)
-				.param("name", "George")
+				.param("name", "George") // This is actually pet name, not visit name
 				.param("date", LocalDate.now().toString())
 				.param("description", "Visit Description"))
 			.andExpect(model().attributeHasFieldErrors("visit", "date"))
 			.andExpect(model().attributeHasFieldErrorCode("visit", "date", "typeMismatch.visitDate"))
 			.andExpect(status().isOk())
 			.andExpect(view().name("pets/createOrUpdateVisitForm"));
+	}
+
+	@Test
+	void showVisitList() throws Exception {
+		mockMvc.perform(get("/visits"))
+			.andExpect(status().isOk())
+			.andExpect(view().name("visits/visitList"))
+			.andExpect(model().attributeExists("visits"));
+	}
+
+	@Test
+	void showVisitListWithDateFilter() throws Exception {
+		LocalDate fromDate = LocalDate.now().minusDays(7);
+		LocalDate toDate = LocalDate.now();
+
+		given(this.visits.findByDateBetween(fromDate, toDate)).willReturn(new ArrayList<>());
+
+		mockMvc.perform(get("/visits?from={from}&to={to}", fromDate, toDate))
+			.andExpect(status().isOk())
+			.andExpect(view().name("visits/visitList"))
+			.andExpect(model().attributeExists("visits"));
+	}
+
+	@Test
+	void showVisitListWithKeywordFilter() throws Exception {
+		String keyword = "check-up";
+		given(this.visits.findByDescriptionContainingIgnoreCase(keyword)).willReturn(new ArrayList<>());
+
+		mockMvc.perform(get("/visits?keyword={keyword}", keyword))
+			.andExpect(status().isOk())
+			.andExpect(view().name("visits/visitList"))
+			.andExpect(model().attributeExists("visits"));
+	}
+
+	@Test
+	void showVisitListWithInvalidDateRange() throws Exception {
+		LocalDate fromDate = LocalDate.now().plusDays(1);
+		LocalDate toDate = LocalDate.now();
+
+		mockMvc.perform(get("/visits?from={from}&to={to}", fromDate, toDate))
+			.andExpect(status().isOk())
+			.andExpect(view().name("visits/visitList"))
+			.andExpect(model().attributeExists("error"));
+	}
+
+	@Test
+	void showVisitListWhenNoVisitsFound() throws Exception {
+		given(this.visits.findAll()).willReturn(new ArrayList<>());
+
+		mockMvc.perform(get("/visits"))
+			.andExpect(status().isOk())
+			.andExpect(view().name("visits/visitList"))
+			.andExpect(model().attribute("visits", new ArrayList<>()));
 	}
 
 }
