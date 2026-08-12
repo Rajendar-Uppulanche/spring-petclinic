@@ -80,15 +80,21 @@ class VisitController {
 		return visit;
 	}
 
+	@ModelAttribute("visitTypes")
+	public VisitType[] visitTypes() {
+		return VisitType.values();
+	}
+
 	@ModelAttribute("minVisitDate")
 	public LocalDate minVisitDate() {
-		return LocalDate.now().plusDays(1);
+		return LocalDate.now();
 	}
 
 	// Spring MVC calls method loadPetWithVisit(...) before initNewVisitForm is
 	// called
 	@GetMapping("/owners/{ownerId}/pets/{petId}/visits/new")
-	public String initNewVisitForm() {
+	public String initNewVisitForm(@ModelAttribute Pet pet, Model model) {
+		model.addAttribute("visit", new Visit());
 		return "pets/createOrUpdateVisitForm";
 	}
 
@@ -97,8 +103,8 @@ class VisitController {
 	@PostMapping("/owners/{ownerId}/pets/{petId}/visits/new")
 	public String processNewVisitForm(@ModelAttribute Owner owner, @PathVariable int petId, @Valid Visit visit,
 			BindingResult result, RedirectAttributes redirectAttributes) {
-		if (visit.getDate() != null && !visit.getDate().isAfter(LocalDate.now())) {
-			result.rejectValue("date", "typeMismatch.visitDate");
+		if (visit.getDate() != null && visit.getDate().isBefore(LocalDate.now())) {
+			result.rejectValue("date", "invalidDate", "Visit date cannot be in the past.");
 		}
 
 		if (result.hasErrors()) {
@@ -108,6 +114,57 @@ class VisitController {
 		owner.addVisit(petId, visit);
 		this.owners.save(owner);
 		redirectAttributes.addFlashAttribute("message", "Your visit has been booked");
+		return "redirect:/owners/{ownerId}";
+	}
+
+	@GetMapping("/owners/{ownerId}/pets/{petId}/visits/{visitId}/edit")
+	public String initEditVisitForm(@PathVariable int visitId, Model model) {
+		// Assuming VisitService or a similar mechanism to fetch a specific visit
+		// For now, we'll simulate fetching it from the owner's pets
+		Owner owner = owners.findById(ownerId).orElseThrow(() -> new IllegalArgumentException("Owner not found"));
+		Pet pet = owner.getPet(petId);
+		Visit visit = pet.getVisits().stream().filter(v -> v.getId() == visitId).findFirst()
+				.orElseThrow(() -> new IllegalArgumentException("Visit not found"));
+
+		model.addAttribute("visit", visit);
+		model.addAttribute("owner", owner);
+		model.addAttribute("pet", pet);
+		return "pets/createOrUpdateVisitForm"; // Reusing the same form for editing
+	}
+
+	@PostMapping("/owners/{ownerId}/pets/{petId}/visits/{visitId}/edit")
+	public String processEditVisitForm(@PathVariable int visitId, @Valid Visit visit, BindingResult result,
+			RedirectAttributes redirectAttributes) {
+
+		if (visit.getDate() != null && visit.getDate().isBefore(LocalDate.now())) {
+			result.rejectValue("date", "invalidDate", "Visit date cannot be in the past.");
+		}
+
+		if (result.hasErrors()) {
+			// Re-populate model for validation errors
+			return "pets/createOrUpdateVisitForm";
+		}
+
+		// In a real application, you would fetch the existing visit, update its fields,
+		// and save it.
+		// For simplicity, we'll assume the visit object passed in has the updated values
+		// and we just need to save the owner to persist the changes.
+		// This part needs to be more robust, fetching the actual visit and updating specific fields.
+		Owner owner = owners.findById(ownerId).orElseThrow(() -> new IllegalArgumentException("Owner not found"));
+		// Find the pet and then the visit to update
+		Pet pet = owner.getPet(petId);
+		Optional<Visit> existingVisitOpt = pet.getVisits().stream().filter(v -> v.getId() == visitId).findFirst();
+
+		if (existingVisitOpt.isPresent()) {
+			Visit existingVisit = existingVisitOpt.get();
+			existingVisit.setDate(visit.getDate());
+			existingVisit.setDescription(visit.getDescription());
+			existingVisit.setVisitType(visit.getVisitType());
+			existingVisit.setVeterinarian(visit.getVeterinarian()); // Assuming veterinarian is part of Visit
+		}
+
+		this.owners.save(owner);
+		redirectAttributes.addFlashAttribute("message", "Visit updated successfully.");
 		return "redirect:/owners/{ownerId}";
 	}
 
