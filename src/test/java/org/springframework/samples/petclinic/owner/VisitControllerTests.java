@@ -1,22 +1,8 @@
-/*
- * Copyright 2012-2025 the original author or authors.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package org.springframework.samples.petclinic.owner;
 
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
@@ -27,13 +13,15 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledInNativeImage;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest; // Corrected import
 import org.springframework.test.context.aot.DisabledInAotMode;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDate;
 import java.util.Optional;
+
+import org.springframework.samples.petclinic.exceptions.TransientDataAccessException; // Import new exception
 
 /**
  * Test class for {@link VisitController}
@@ -56,13 +44,18 @@ class VisitControllerTests {
 	@MockitoBean
 	private OwnerRepository owners;
 
+	private Owner testOwner;
+	private Pet testPet;
+
 	@BeforeEach
 	void init() {
-		Owner owner = new Owner();
-		Pet pet = new Pet();
-		owner.addPet(pet);
-		pet.setId(TEST_PET_ID);
-		given(this.owners.findById(TEST_OWNER_ID)).willReturn(Optional.of(owner));
+		testOwner = new Owner();
+		testOwner.setId(TEST_OWNER_ID); // Set ID for owner
+		testPet = new Pet();
+		testPet.setId(TEST_PET_ID);
+		testOwner.addPet(testPet);
+
+		given(this.owners.findById(TEST_OWNER_ID)).willReturn(Optional.of(testOwner));
 	}
 
 	@Test
@@ -81,6 +74,9 @@ class VisitControllerTests {
 				.param("description", "Visit Description"))
 			.andExpect(status().is3xxRedirection())
 			.andExpect(view().name("redirect:/owners/{ownerId}"));
+
+		// Verify that save was called once
+		verify(owners, times(1)).save(testOwner);
 	}
 
 	@Test
@@ -104,6 +100,44 @@ class VisitControllerTests {
 			.andExpect(model().attributeHasFieldErrorCode("visit", "date", "typeMismatch.visitDate"))
 			.andExpect(status().isOk())
 			.andExpect(view().name("pets/createOrUpdateVisitForm"));
+	}
+
+	// New test case for retry mechanism
+	@Test
+	void processNewVisitFormRetriesOnTransientFailure() throws Exception {
+		// Configure mock to throw TransientDataAccessException twice, then succeed
+		doThrow(new TransientDataAccessException("Simulated transient failure 1"))
+				.doThrow(new TransientDataAccessException("Simulated transient failure 2"))
+				.willReturn(null); // Return void for save method
+
+		mockMvc
+			.perform(post("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, TEST_PET_ID)
+				.param("name", "George")
+				.param("date", LocalDate.now().plusDays(1).toString())
+				.param("description", "Visit Description"))
+			.andExpect(status().is3xxRedirection())
+			.andExpect(view().name("redirect:/owners/{ownerId}"));
+
+		// Verify that save was called 3 times (2 failures + 1 success)
+		verify(owners, times(3)).save(testOwner);
+	}
+
+	@Test
+	void processNewVisitFormFailsAfterMaxRetries() throws Exception {
+		// Configure mock to throw TransientDataAccessException for all attempts (default 3)
+		doThrow(new TransientDataAccessException("Simulated transient failure 1"))
+				.doThrow(new TransientDataAccessException("Simulated transient failure 2"))
+				.doThrow(new TransientDataAccessException("Simulated transient failure 3"));
+
+		mockMvc
+			.perform(post("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, TEST_PET_ID)
+				.param("name", "George")
+				.param("date", LocalDate.now().plusDays(1).toString())
+				.param("description", "Visit Description"))
+			.andExpect(status().isInternalServerError()); // Expecting a 500 error due to retry exhaustion
+
+		// Verify that save was called 3 times (max attempts)
+		verify(owners, times(3)).save(testOwner);
 	}
 
 }
