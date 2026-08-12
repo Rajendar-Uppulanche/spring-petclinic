@@ -80,9 +80,14 @@ class VisitController {
 		return visit;
 	}
 
+	@ModelAttribute("visitTypes")
+	public VisitType[] getVisitTypes() {
+		return VisitType.values();
+	}
+
 	@ModelAttribute("minVisitDate")
 	public LocalDate minVisitDate() {
-		return LocalDate.now().plusDays(1);
+		return LocalDate.now();
 	}
 
 	// Spring MVC calls method loadPetWithVisit(...) before initNewVisitForm is
@@ -98,7 +103,7 @@ class VisitController {
 	public String processNewVisitForm(@ModelAttribute Owner owner, @PathVariable int petId, @Valid Visit visit,
 			BindingResult result, RedirectAttributes redirectAttributes) {
 		if (visit.getDate() != null && !visit.getDate().isAfter(LocalDate.now())) {
-			result.rejectValue("date", "typeMismatch.visitDate");
+			result.rejectValue("date", "visitDate.invalid", "Visit date must be in the future.");
 		}
 
 		if (result.hasErrors()) {
@@ -108,6 +113,47 @@ class VisitController {
 		owner.addVisit(petId, visit);
 		this.owners.save(owner);
 		redirectAttributes.addFlashAttribute("message", "Your visit has been booked");
+		return "redirect:/owners/{ownerId}";
+	}
+
+	@GetMapping("/owners/{ownerId}/pets/{petId}/visits/{visitId}/edit")
+	public String initEditVisitForm(@PathVariable int visitId, Map<String, Object> model) {
+		// Retrieve the owner and pet to ensure they exist and to add them to the model
+		Owner owner = (Owner) model.get("owner");
+		Pet pet = (Pet) model.get("pet");
+
+		// Find the visit to edit
+		Visit visit = pet.getVisits().stream().filter(v -> v.getId() == visitId).findFirst()
+				.orElseThrow(() -> new IllegalArgumentException("Visit with id " + visitId + " not found."));
+
+		model.put("visit", visit);
+		model.put("visitTypes", VisitType.values());
+		model.put("minVisitDate", LocalDate.now()); // Allow editing to past dates
+		return "pets/createOrUpdateVisitForm";
+	}
+
+	@PostMapping("/owners/{ownerId}/pets/{petId}/visits/{visitId}/edit")
+	public String processEditVisitForm(@ModelAttribute Owner owner, @PathVariable int petId, @PathVariable int visitId,
+			@Valid Visit visit, BindingResult result, RedirectAttributes redirectAttributes) {
+
+		// Re-fetch the original visit to preserve date and type if not changed
+		Pet pet = owner.getPet(petId);
+		Visit originalVisit = pet.getVisits().stream().filter(v -> v.getId() == visitId).findFirst()
+				.orElseThrow(() -> new IllegalArgumentException("Visit with id " + visitId + " not found."));
+
+		// Only allow editing the description
+		visit.setDate(originalVisit.getDate());
+		visit.setType(originalVisit.getType());
+		visit.setPet(originalVisit.getPet());
+		visit.setId(originalVisit.getId());
+
+		if (result.hasErrors()) {
+			return "pets/createOrUpdateVisitForm";
+		}
+
+		owner.updateVisit(visit);
+		this.owners.save(owner);
+		redirectAttributes.addFlashAttribute("message", "Your visit has been updated");
 		return "redirect:/owners/{ownerId}";
 	}
 
