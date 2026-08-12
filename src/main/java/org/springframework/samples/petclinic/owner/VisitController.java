@@ -44,8 +44,11 @@ class VisitController {
 
 	private final OwnerRepository owners;
 
-	public VisitController(OwnerRepository owners) {
+	private final PaymentService paymentService;
+
+	public VisitController(OwnerRepository owners, PaymentService paymentService) {
 		this.owners = owners;
+		this.paymentService = paymentService;
 	}
 
 	@InitBinder
@@ -106,6 +109,19 @@ class VisitController {
 		}
 
 		owner.addVisit(petId, visit);
+		// Attempt to process payment, with retry logic for transient failures
+		try {
+			paymentService.processPayment(visit.getId(), visit.getDescription());
+		} catch (TransientPaymentFailureException e) {
+			// Handle the case where retries are exhausted
+			result.reject("payment.failed.transient", "Payment processing failed after multiple retries.");
+			return "pets/createOrUpdateVisitForm";
+		} catch (PaymentProcessingException e) {
+			// Handle other payment processing errors
+			result.reject("payment.failed", "Payment processing failed.");
+			return "pets/createOrUpdateVisitForm";
+		}
+
 		this.owners.save(owner);
 		redirectAttributes.addFlashAttribute("message", "Your visit has been booked");
 		return "redirect:/owners/{ownerId}";
