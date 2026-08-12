@@ -16,9 +16,12 @@
 package org.springframework.samples.petclinic.owner;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Map;
 import java.util.Optional;
 
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.WebDataBinder;
@@ -27,6 +30,7 @@ import org.springframework.web.bind.annotation.InitBinder;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import jakarta.validation.Valid;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
@@ -43,9 +47,11 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 class VisitController {
 
 	private final OwnerRepository owners;
+	private final VisitRepository visits;
 
-	public VisitController(OwnerRepository owners) {
+	public VisitController(OwnerRepository owners, VisitRepository visits) {
 		this.owners = owners;
+		this.visits = visits;
 	}
 
 	@InitBinder
@@ -76,6 +82,7 @@ class VisitController {
 		model.put("owner", owner);
 
 		Visit visit = new Visit();
+		visit.setPet(pet);
 		pet.addVisit(visit);
 		return visit;
 	}
@@ -111,4 +118,49 @@ class VisitController {
 		return "redirect:/owners/{ownerId}";
 	}
 
+	/**
+	 * Custom handler for displaying a pet's visit history with filtering capabilities.
+	 * @param ownerId the ID of the owner to whom the pet belongs
+	 * @param petId the ID of the pet whose visits are to be displayed
+	 * @param fromDate optional start date for filtering visits
+	 * @param toDate optional end date for filtering visits
+	 * @param keyword optional keyword to search in visit descriptions
+	 * @param model the model to which visits and filter parameters are added
+	 * @return the name of the view to render
+	 */
+	@GetMapping("/owners/{ownerId}/pets/{petId}/visits/history")
+	public String showVisitHistory(@PathVariable("ownerId") int ownerId,
+								   @PathVariable("petId") int petId,
+								   @RequestParam(value = "fromDate", required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate fromDate,
+								   @RequestParam(value = "toDate", required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate toDate,
+								   @RequestParam(value = "keyword", required = false) String keyword,
+								   Map<String, Object> model) {
+
+		// Server-side validation for date range (Step 5)
+		if (fromDate != null && toDate != null && fromDate.isAfter(toDate)) {
+			model.put("dateError", "From Date cannot be after To Date.");
+			model.put("visits", new ArrayList<Visit>()); // Return empty list on validation error
+		} else {
+			Collection<Visit> filteredVisits = visits.findByPetIdAndFilters(petId, fromDate, toDate, keyword);
+			model.put("visits", filteredVisits);
+		}
+
+		// Fetch owner and pet for context
+		Optional<Owner> optionalOwner = owners.findById(ownerId);
+		Owner owner = optionalOwner.orElseThrow(() -> new IllegalArgumentException(
+				"Owner not found with id: " + ownerId + ". Please ensure the ID is correct "));
+		Pet pet = owner.getPet(petId);
+		if (pet == null) {
+			throw new IllegalArgumentException(
+					"Pet with id " + petId + " not found for owner with id " + ownerId + ".");
+		}
+
+		model.put("pet", pet);
+		model.put("owner", owner);
+		model.put("fromDate", fromDate);
+		model.put("toDate", toDate);
+		model.put("keyword", keyword);
+
+		return "pets/visitHistory"; // Assuming a new Thymeleaf template for visit history
+	}
 }
