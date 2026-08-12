@@ -23,17 +23,21 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.Optional;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledInNativeImage;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.samples.petclinic.model.Owner;
+import org.springframework.samples.petclinic.model.Pet;
+import org.springframework.samples.petclinic.model.Visit;
 import org.springframework.test.context.aot.DisabledInAotMode;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-
-import java.time.LocalDate;
-import java.util.Optional;
 
 /**
  * Test class for {@link VisitController}
@@ -50,6 +54,8 @@ class VisitControllerTests {
 
 	private static final int TEST_PET_ID = 1;
 
+	private static final int TEST_VISIT_ID = 1;
+
 	@Autowired
 	private MockMvc mockMvc;
 
@@ -59,10 +65,20 @@ class VisitControllerTests {
 	@BeforeEach
 	void init() {
 		Owner owner = new Owner();
+		owner.setId(TEST_OWNER_ID);
 		Pet pet = new Pet();
-		owner.addPet(pet);
 		pet.setId(TEST_PET_ID);
+		owner.addPet(pet);
 		given(this.owners.findById(TEST_OWNER_ID)).willReturn(Optional.of(owner));
+		given(this.owners.findOwnerByPetId(TEST_OWNER_ID)).willReturn(owner);
+		given(this.owners.findById(TEST_PET_ID)).willReturn(pet);
+
+		Visit visit = new Visit();
+		visit.setId(TEST_VISIT_ID);
+		visit.setPet(pet);
+		visit.setDate(LocalDate.now());
+		visit.setDescription("Test Visit");
+		given(this.owners.findVisitById(TEST_VISIT_ID)).willReturn(visit);
 	}
 
 	@Test
@@ -76,7 +92,7 @@ class VisitControllerTests {
 	void processNewVisitFormSuccess() throws Exception {
 		mockMvc
 			.perform(post("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, TEST_PET_ID)
-				.param("name", "George")
+				.param("name", "George") // This param is not used in the form, but it's present in the original test
 				.param("date", LocalDate.now().plusDays(1).toString())
 				.param("description", "Visit Description"))
 			.andExpect(status().is3xxRedirection())
@@ -87,7 +103,7 @@ class VisitControllerTests {
 	void processNewVisitFormHasErrors() throws Exception {
 		mockMvc
 			.perform(post("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, TEST_PET_ID).param("name",
-					"George"))
+					"George")) // This param is not used in the form, but it's present in the original test
 			.andExpect(model().attributeHasErrors("visit"))
 			.andExpect(status().isOk())
 			.andExpect(view().name("pets/createOrUpdateVisitForm"));
@@ -97,13 +113,65 @@ class VisitControllerTests {
 	void processNewVisitFormHasErrorsWhenVisitDateIsNotInFuture() throws Exception {
 		mockMvc
 			.perform(post("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, TEST_PET_ID)
-				.param("name", "George")
+				.param("name", "George") // This param is not used in the form, but it's present in the original test
 				.param("date", LocalDate.now().toString())
 				.param("description", "Visit Description"))
 			.andExpect(model().attributeHasFieldErrors("visit", "date"))
 			.andExpect(model().attributeHasFieldErrorCode("visit", "date", "typeMismatch.visitDate"))
 			.andExpect(status().isOk())
 			.andExpect(view().name("pets/createOrUpdateVisitForm"));
+	}
+
+	@Test
+	void initVisitDetailView() throws Exception {
+		mockMvc.perform(get("/owners/{ownerId}/pets/{petId}/visits/{visitId}", TEST_OWNER_ID, TEST_PET_ID, TEST_VISIT_ID))
+			.andExpect(status().isOk())
+			.andExpect(view().name("pets/visit_details"));
+	}
+
+	@Test
+	void checkInVisitSuccess() throws Exception {
+		mockMvc.perform(get("/owners/{ownerId}/pets/{petId}/visits/{visitId}/checkin", TEST_OWNER_ID, TEST_PET_ID, TEST_VISIT_ID))
+			.andExpect(status().is3xxRedirection())
+			.andExpect(view().name("redirect:/owners/" + TEST_OWNER_ID + "/pets/" + TEST_PET_ID));
+	}
+
+	@Test
+	void checkInVisitTooFarInFuture() throws Exception {
+		Visit visit = new Visit();
+		visit.setId(TEST_VISIT_ID);
+		visit.setPet(owners.findById(TEST_PET_ID));
+		visit.setDate(LocalDate.now().plusDays(2)); // More than 24 hours in the future
+		visit.setDescription("Future Visit");
+		given(this.owners.findVisitById(TEST_VISIT_ID)).willReturn(visit);
+
+		mockMvc.perform(get("/owners/{ownerId}/pets/{petId}/visits/{visitId}/checkin", TEST_OWNER_ID, TEST_PET_ID, TEST_VISIT_ID))
+			.andExpect(status().isOk())
+			.andExpect(view().name("pets/createOrUpdateVisitForm")) // Assuming it redirects back to form with error
+			.andExpect(model().attributeExists("error"));
+	}
+
+	@Test
+	void checkOutVisitSuccess() throws Exception {
+		Visit visit = owners.findVisitById(TEST_VISIT_ID);
+		visit.setCheckInTime(LocalDateTime.now().minusHours(1)); // Set check-in time to be in the past
+		given(this.owners.findVisitById(TEST_VISIT_ID)).willReturn(visit);
+
+		mockMvc.perform(get("/owners/{ownerId}/pets/{petId}/visits/{visitId}/checkout", TEST_OWNER_ID, TEST_PET_ID, TEST_VISIT_ID))
+			.andExpect(status().is3xxRedirection())
+			.andExpect(view().name("redirect:/owners/" + TEST_OWNER_ID + "/pets/" + TEST_PET_ID));
+	}
+
+	@Test
+	void checkOutVisitBeforeCheckIn() throws Exception {
+		Visit visit = owners.findVisitById(TEST_VISIT_ID);
+		visit.setCheckInTime(LocalDateTime.now().plusHours(1)); // Set check-in time to be in the future
+		given(this.owners.findVisitById(TEST_VISIT_ID)).willReturn(visit);
+
+		mockMvc.perform(get("/owners/{ownerId}/pets/{petId}/visits/{visitId}/checkout", TEST_OWNER_ID, TEST_PET_ID, TEST_VISIT_ID))
+			.andExpect(status().isOk())
+			.andExpect(view().name("pets/createOrUpdateVisitForm")) // Assuming it redirects back to form with error
+			.andExpect(model().attributeExists("error"));
 	}
 
 }
