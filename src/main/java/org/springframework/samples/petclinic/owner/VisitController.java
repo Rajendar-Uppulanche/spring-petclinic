@@ -16,6 +16,7 @@
 package org.springframework.samples.petclinic.owner;
 
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.Map;
 import java.util.Optional;
 
@@ -27,6 +28,7 @@ import org.springframework.web.bind.annotation.InitBinder;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import jakarta.validation.Valid;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
@@ -44,8 +46,11 @@ class VisitController {
 
 	private final OwnerRepository owners;
 
-	public VisitController(OwnerRepository owners) {
+	private final VisitRepository visits;
+
+	public VisitController(OwnerRepository owners, VisitRepository visits) {
 		this.owners = owners;
+		this.visits = visits;
 	}
 
 	@InitBinder
@@ -54,8 +59,9 @@ class VisitController {
 	}
 
 	/**
-	 * Called before each and every @RequestMapping annotated method. 2 goals: - Make sure
-	 * we always have fresh data - Since we do not use the session scope, make sure that
+	 * Called before each and every @RequestMapping annotated method. 2 goals:
+	 * - Make sure we always have fresh data
+	 * - Since we do not use the session scope, make sure that
 	 * Pet object always has an id (Even though id is not part of the form fields)
 	 * @param petId
 	 * @return Pet
@@ -109,6 +115,37 @@ class VisitController {
 		this.owners.save(owner);
 		redirectAttributes.addFlashAttribute("message", "Your visit has been booked");
 		return "redirect:/owners/{ownerId}";
+	}
+
+	@GetMapping(value = {"/visits"})
+	public String showVisitList(@RequestParam(name = "from_date", required = false) LocalDate fromDate,
+			@RequestParam(name = "to_date", required = false) LocalDate toDate,
+			@RequestParam(name = "keyword", required = false) String keyword,
+			Map<String, Object> model) {
+
+		// Use local date if not provided
+		LocalDate startDate = (fromDate == null) ? LocalDate.now().minusYears(1) : fromDate;
+		LocalDate endDate = (toDate == null) ? LocalDate.now() : toDate;
+
+		// Validate date range
+		if (startDate.isAfter(endDate)) {
+			model.put("message", "From date cannot be after to date.");
+			return "visits/visitList";
+		}
+
+		Collection<Visit> results;
+		if (keyword != null && !keyword.isEmpty()) {
+			results = this.visits.findByDescriptionContainingIgnoreCase(keyword);
+		} else {
+			results = this.visits.findByDateBetween(startDate, endDate);
+		}
+
+		model.put("visits", results);
+		model.put("from_date", startDate);
+		model.put("to_date", endDate);
+		model.put("keyword", keyword);
+
+		return "visits/visitList";
 	}
 
 }
