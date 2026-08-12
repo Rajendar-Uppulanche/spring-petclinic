@@ -16,6 +16,7 @@
 package org.springframework.samples.petclinic.owner;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.samples.petclinic.model.BaseEntity;
@@ -42,6 +43,12 @@ public class Visit extends BaseEntity {
 	@NotBlank
 	private String description;
 
+	@Column(name = "check_in_time")
+	private LocalDateTime checkInTime;
+
+	@Column(name = "check_out_time")
+	private LocalDateTime checkOutTime;
+
 	/**
 	 * Creates a new instance of Visit for tomorrow
 	 */
@@ -63,6 +70,22 @@ public class Visit extends BaseEntity {
 
 	public void setDescription(String description) {
 		this.description = description;
+	}
+
+	public LocalDateTime getCheckInTime() {
+		return checkInTime;
+	}
+
+	public void setCheckInTime(LocalDateTime checkInTime) {
+		this.checkInTime = checkInTime;
+	}
+
+	public LocalDateTime getCheckOutTime() {
+		return checkOutTime;
+	}
+
+	public void setCheckOutTime(LocalDateTime checkOutTime) {
+		this.checkOutTime = checkOutTime;
 	}
 
 }
