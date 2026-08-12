@@ -16,6 +16,7 @@
 package org.springframework.samples.petclinic.owner;
 
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.Map;
 import java.util.Optional;
 
@@ -27,6 +28,7 @@ import org.springframework.web.bind.annotation.InitBinder;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import jakarta.validation.Valid;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
@@ -44,8 +46,11 @@ class VisitController {
 
 	private final OwnerRepository owners;
 
-	public VisitController(OwnerRepository owners) {
+	private final VisitRepository visits;
+
+	public VisitController(OwnerRepository owners, VisitRepository visits) {
 		this.owners = owners;
+		this.visits = visits;
 	}
 
 	@InitBinder
@@ -109,6 +114,38 @@ class VisitController {
 		this.owners.save(owner);
 		redirectAttributes.addFlashAttribute("message", "Your visit has been booked");
 		return "redirect:/owners/{ownerId}";
+	}
+
+	@GetMapping(value = {"/visits"})
+	public String showVisitList(@RequestParam(name = "from", required = false) LocalDate fromDate,
+			@RequestParam(name = "to", required = false) LocalDate toDate,
+			@RequestParam(name = "keyword", required = false) String keyword,
+			Map<String, Object> model) {
+
+		// Use local date for comparison if not provided
+		LocalDate startDate = (fromDate != null) ? fromDate : LocalDate.MIN;
+		LocalDate endDate = (toDate != null) ? toDate : LocalDate.now();
+
+		// Perform validation: fromDate should not be after toDate
+		if (fromDate != null && toDate != null && fromDate.isAfter(toDate)) {
+			model.put("error", "From date cannot be after to date.");
+		}
+
+		Collection<Visit> results;
+		if (keyword != null && !keyword.isEmpty()) {
+			results = this.visits.findByDescriptionContainingIgnoreCase(keyword);
+		} else if (fromDate != null || toDate != null) {
+			results = this.visits.findByDateBetween(startDate, endDate);
+		} else {
+			results = this.visits.findAll();
+		}
+
+		model.put("visits", results);
+		model.put("from", fromDate);
+		model.put("to", toDate);
+		model.put("keyword", keyword);
+
+		return "visits/visitList";
 	}
 
 }
