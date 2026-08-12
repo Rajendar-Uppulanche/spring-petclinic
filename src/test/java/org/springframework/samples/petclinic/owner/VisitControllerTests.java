@@ -27,12 +27,16 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledInNativeImage;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.test.context.aot.DisabledInAotMode;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDate;
+import java.util.Collections;
 import java.util.Optional;
 
 /**
@@ -53,8 +57,11 @@ class VisitControllerTests {
 	@Autowired
 	private MockMvc mockMvc;
 
-	@MockitoBean
+	@MockBean
 	private OwnerRepository owners;
+
+	@MockBean
+	private VisitRepository visits;
 
 	@BeforeEach
 	void init() {
@@ -87,7 +94,7 @@ class VisitControllerTests {
 	void processNewVisitFormHasErrors() throws Exception {
 		mockMvc
 			.perform(post("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, TEST_PET_ID).param("name",
-					"George"))
+				"George"))
 			.andExpect(model().attributeHasErrors("visit"))
 			.andExpect(status().isOk())
 			.andExpect(view().name("pets/createOrUpdateVisitForm"));
@@ -104,6 +111,34 @@ class VisitControllerTests {
 			.andExpect(model().attributeHasFieldErrorCode("visit", "date", "typeMismatch.visitDate"))
 			.andExpect(status().isOk())
 			.andExpect(view().name("pets/createOrUpdateVisitForm"));
+	}
+
+	@Test
+	void showVisitHistory() throws Exception {
+		mockMvc.perform(get("/owners/{ownerId}/pets/{petId}/visits", TEST_OWNER_ID, TEST_PET_ID))
+			.andExpect(status().isOk())
+			.andExpect(view().name("pets/visitHistory"));
+	}
+
+	@Test
+	void showVisitHistoryWithPaginationAndSorting() throws Exception {
+		Visit visit = new Visit();
+		visit.setDate(LocalDate.now());
+		visit.setDescription("Test visit");
+		
+		given(this.visits.findByPetId(TEST_PET_ID, PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "appointmentDate"))))
+			.willReturn(new PageImpl<>(Collections.singletonList(visit)));
+
+		mockMvc.perform(get("/owners/{ownerId}/pets/{petId}/visits", TEST_OWNER_ID, TEST_PET_ID))
+			.andExpect(status().isOk())
+			.andExpect(view().name("pets/visitHistory"));
+	}
+
+	@Test
+	void exportVisitsCsv() throws Exception {
+		mockMvc.perform(get("/owners/{ownerId}/pets/{petId}/visits/export/csv", TEST_OWNER_ID, TEST_PET_ID))
+			.andExpect(status().isOk())
+			.andExpect(view().name("pets/visitHistoryCsv"));
 	}
 
 }
