@@ -28,8 +28,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledInNativeImage;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.FilterType;
 import org.springframework.test.context.aot.DisabledInAotMode;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDate;
@@ -41,7 +42,9 @@ import java.util.Optional;
  * @author Colin But
  * @author Wick Dynex
  */
-@WebMvcTest(VisitController.class)
+@WebMvcTest(value = VisitController.class,
+		includeFilters = @ComponentScan.Filter(value = org.springframework.stereotype.Controller.class, type = FilterType.ASSIGNABLE_TYPE),
+		excludeFilters = @ComponentScan.Filter(value = org.springframework.stereotype.Repository.class, type = FilterType.ASSIGNABLE_TYPE))
 @DisabledInNativeImage
 @DisabledInAotMode
 class VisitControllerTests {
@@ -53,8 +56,16 @@ class VisitControllerTests {
 	@Autowired
 	private MockMvc mockMvc;
 
-	@MockitoBean
+	// Mocking OwnerRepository and VisitRepository
+	// VisitService is implicitly tested via VisitController
+	@org.mockito.MockBean
 	private OwnerRepository owners;
+
+	@org.mockito.MockBean
+	private VisitRepository visits;
+
+	@org.mockito.MockBean
+	private VisitService visitService;
 
 	@BeforeEach
 	void init() {
@@ -62,7 +73,18 @@ class VisitControllerTests {
 		Pet pet = new Pet();
 		owner.addPet(pet);
 		pet.setId(TEST_PET_ID);
+		// Mocking owner repository findById
 		given(this.owners.findById(TEST_OWNER_ID)).willReturn(Optional.of(owner));
+
+		// Mocking visit service for pagination and export
+		VisitPage visitPage = new VisitPage(pet.getVisits(), pet.getVisits().size(), 1, 10);
+		given(this.visitService.findVisitsByPetId(TEST_PET_ID, 1, 10, "appointmentDate", "desc"))
+				.willReturn(visitPage);
+		given(this.visitService.exportVisitsAsCsv(pet.getName(), pet.getVisits()))
+				.willReturn(new byte[0]); // Return empty byte array for export test
+		given(this.visitService.generateCsvFilename(pet.getName()))
+				.willReturn("petclinic_visits_Buddy_2023-01-01.csv");
+
 	}
 
 	@Test
@@ -87,7 +109,7 @@ class VisitControllerTests {
 	void processNewVisitFormHasErrors() throws Exception {
 		mockMvc
 			.perform(post("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, TEST_PET_ID).param("name",
-					"George"))
+				"George"))
 			.andExpect(model().attributeHasErrors("visit"))
 			.andExpect(status().isOk())
 			.andExpect(view().name("pets/createOrUpdateVisitForm"));
@@ -104,6 +126,67 @@ class VisitControllerTests {
 			.andExpect(model().attributeHasFieldErrorCode("visit", "date", "typeMismatch.visitDate"))
 			.andExpect(status().isOk())
 			.andExpect(view().name("pets/createOrUpdateVisitForm"));
+	}
+
+	@Test
+	void showPetVisits() throws Exception {
+		mockMvc.perform(get("/owners/{ownerId}/pets/{petId}/visits", TEST_OWNER_ID, TEST_PET_ID))
+			.andExpect(status().isOk())
+			.andExpect(view().name("pets/visitList"))
+			.andExpect(model().attributeExists("visits"))
+			.andExpect(model().attributeExists("currentPage"))
+			.andExpect(model().attributeExists("pageSize"))
+			.andExpect(model().attributeExists("sort"))
+			.andExpect(model().attributeExists("direction"));
+	}
+
+	@Test
+	void showPetVisitsWithPaginationAndSorting() throws Exception {
+		mockMvc.perform(get("/owners/{ownerId}/pets/{petId}/visits", TEST_OWNER_ID, TEST_PET_ID)
+				.param("page", "2")
+				.param("size", "25")
+				.param("sort", "visitDate")
+				.param("direction", "asc"))
+			.andExpect(status().isOk())
+			.andExpect(view().name("pets/visitList"));
+
+		// Verify that visitService.findVisitsByPetId was called with correct parameters
+		org.mockito.Mockito.verify(visitService).findVisitsByPetId(TEST_PET_ID, 2, 25, "visitDate", "asc");
+	}
+
+	@Test
+	void exportPetVisits() throws Exception {
+		mockMvc.perform(get("/owners/{ownerId}/pets/{petId}/visits/export", TEST_OWNER_ID, TEST_PET_ID))
+			.andExpect(status().isOk())
+			.andExpect(model().attributeExists("owner"))
+			.andExpect(model().attributeExists("pet"));
+
+		// Verify that visitService.exportVisitsAsCsv and generateCsvFilename were called
+		org.mockito.Mockito.verify(visitService).exportVisitsAsCsv(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyCollection());
+		org.mockito.Mockito.verify(visitService).generateCsvFilename(org.mockito.ArgumentMatchers.anyString());
+	}
+
+	@Test
+	void exportPetVisits_NoVisits() throws Exception {
+		Owner owner = new Owner();
+		Pet pet = new Pet();
+		owner.addPet(pet);
+		pet.setId(TEST_PET_ID);
+		// Ensure owner repository returns this owner
+		given(this.owners.findById(TEST_OWNER_ID)).willReturn(Optional.of(owner));
+
+		// Mock visitService to return empty visits for export
+		given(this.visitService.exportVisitsAsCsv(pet.getName(), pet.getVisits()))
+				.willReturn(new byte[0]);
+		given(this.visitService.generateCsvFilename(pet.getName()))
+				.willReturn("petclinic_visits_Buddy_2023-01-01.csv");
+
+		mockMvc.perform(get("/owners/{ownerId}/pets/{petId}/visits/export", TEST_OWNER_ID, TEST_PET_ID))
+			.andExpect(status().isOk());
+
+		// Verify that visitService.exportVisitsAsCsv and generateCsvFilename were called
+		org.mockito.Mockito.verify(visitService).exportVisitsAsCsv(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyCollection());
+		org.mockito.Mockito.verify(visitService).generateCsvFilename(org.mockito.ArgumentMatchers.anyString());
 	}
 
 }
