@@ -15,44 +15,58 @@
  */
 package org.springframework.samples.petclinic.vet;
 
+import java.util.Collection;
+import java.util.List;
+import java.util.Optional;
+
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.dao.DataAccessException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.Repository;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.util.Collection;
+import org.springframework.data.repository.query.Param;
 
 /**
- * Repository class for <code>Vet</code> domain objects All method names are compliant
- * with Spring Data naming conventions so this interface can easily be extended for Spring
- * Data. See:
- * https://docs.spring.io/spring-data/jpa/docs/current/reference/html/#repositories.query-methods.query-creation
+ * Repository class for {@link Vet} domain objects
  *
+ * @author Mark Fisher
  * @author Ken Krebs
- * @author Juergen Hoeller
- * @author Sam Brannen
- * @author Michael Isvy
+ * @author Christoph Illies
+ * @author Vitězslav Vondra
  */
 public interface VetRepository extends Repository<Vet, Integer> {
 
 	/**
-	 * Retrieve all <code>Vet</code>s from the data store.
-	 * @return a <code>Collection</code> of <code>Vet</code>s
+	 * Retrieve all {@link Vet}s from the data store, returning a list of all {@link Vet}s.
+	 * @return a collection of {@link Vet}s
 	 */
-	@Transactional(readOnly = true)
 	@Cacheable("vets")
-	Collection<Vet> findAll() throws DataAccessException;
+	@Query("SELECT DISTINCT vet FROM Vet vet LEFT JOIN FETCH vet.specialties ORDER BY vet.lastName ASC")
+	List<Vet> findAll() throws DataAccessException;
 
 	/**
-	 * Retrieve all <code>Vet</code>s from data store in Pages
-	 * @param pageable
-	 * @return
-	 * @throws DataAccessException
+	 * Retrieve all {@link Vet}s from the data store, returning a paginated list of all {@link Vet}s.
+	 * @param pageable the pagination information
+	 * @return a paginated collection of {@link Vet}s
 	 */
-	@Transactional(readOnly = true)
 	@Cacheable("vets")
-	Page<Vet> findAll(Pageable pageable) throws DataAccessException;
+	Page<Vet> findAll(Pageable pageable);
+
+	/**
+	 * Retrieve {@link Vet}s by name.
+	 * @param name the name to search for
+	 * @return a collection of matching {@link Vet}s
+	 */
+	@Query("SELECT vet FROM Vet vet WHERE vet.firstName LIKE :name OR vet.lastName LIKE :name")
+	Collection<Vet> findByName(@Param("name") String name);
+
+	/**
+	 * Retrieve {@link Vet}s by ID.
+	 * @param id the ID to search for
+	 * @return a collection of matching {@link Vet}s
+	 */
+	@Query("SELECT vet FROM Vet vet WHERE vet.id =:id")
+	Optional<Vet> findById(@Param("id") Integer id);
 
 }

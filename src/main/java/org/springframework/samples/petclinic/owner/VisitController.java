@@ -19,6 +19,8 @@ import java.time.LocalDate;
 import java.util.Map;
 import java.util.Optional;
 
+import org.springframework.samples.petclinic.vet.Vet;
+import org.springframework.samples.petclinic.vet.VetRepository;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.WebDataBinder;
@@ -43,9 +45,11 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 class VisitController {
 
 	private final OwnerRepository owners;
+	private final VetRepository vets;
 
-	public VisitController(OwnerRepository owners) {
+	public VisitController(OwnerRepository owners, VetRepository vets) {
 		this.owners = owners;
+		this.vets = vets;
 	}
 
 	@InitBinder
@@ -85,6 +89,11 @@ class VisitController {
 		return LocalDate.now().plusDays(1);
 	}
 
+	@ModelAttribute("vets")
+	public java.util.Collection<Vet> allVets() {
+		return this.vets.findAll();
+	}
+
 	// Spring MVC calls method loadPetWithVisit(...) before initNewVisitForm is
 	// called
 	@GetMapping("/owners/{ownerId}/pets/{petId}/visits/new")
@@ -108,6 +117,35 @@ class VisitController {
 		owner.addVisit(petId, visit);
 		this.owners.save(owner);
 		redirectAttributes.addFlashAttribute("message", "Your visit has been booked");
+		return "redirect:/owners/{ownerId}";
+	}
+
+	@GetMapping("/owners/{ownerId}/pets/{petId}/visits/{visitId}/edit")
+	public String initEditVisitForm(@PathVariable int visitId, Map<String, Object> model) {
+		Visit visit = this.owners.findVisitById(visitId)
+			.orElseThrow(() -> new IllegalArgumentException("Visit not found with id: " + visitId));
+		model.put("visit", visit);
+		return "pets/createOrUpdateVisitForm";
+	}
+
+	@PostMapping("/owners/{ownerId}/pets/{petId}/visits/{visitId}/edit")
+	public String processEditVisitForm(@PathVariable int visitId, @Valid Visit visit, BindingResult result,
+			RedirectAttributes redirectAttributes) {
+		if (visit.getDate() != null && !visit.getDate().isAfter(LocalDate.now())) {
+			result.rejectValue("date", "typeMismatch.visitDate");
+		}
+
+		if (result.hasErrors()) {
+			return "pets/createOrUpdateVisitForm";
+		}
+
+		Visit currentVisit = this.owners.findVisitById(visitId)
+			.orElseThrow(() -> new IllegalArgumentException("Visit not found with id: " + visitId));
+		currentVisit.setDate(visit.getDate());
+		currentVisit.setDescription(visit.getDescription());
+		// Vet reassignment logic will be added here
+		this.owners.save(currentVisit.getPet().getOwner()); // Save the owner to persist changes
+		redirectAttributes.addFlashAttribute("message", "Your visit has been updated");
 		return "redirect:/owners/{ownerId}";
 	}
 
