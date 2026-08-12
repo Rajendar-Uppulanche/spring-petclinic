@@ -100,10 +100,17 @@ class VisitControllerTests {
 				.param("name", "George")
 				.param("date", LocalDate.now().toString())
 				.param("description", "Visit Description"))
-			.andExpect(model().attributeHasFieldErrors("visit", "date"))
-			.andExpect(model().attributeHasFieldErrorCode("visit", "date", "typeMismatch.visitDate"))
+			.andExpect(model().attributeHasFieldErrors("visit", "date")),
+            model().attributeHasFieldErrorCode("visit", "date", "typeMismatch.visitDate"))
 			.andExpect(status().isOk())
 			.andExpect(view().name("pets/createOrUpdateVisitForm"));
 	}
+
+    @Test
+    void testVisitFormStyling() throws Exception {
+        mockMvc.perform(get("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, TEST_PET_ID))
+            .andExpect(status().isOk())
+            .andExpect(view().name("pets/createOrUpdateVisitForm"));
+    }
 
 }
