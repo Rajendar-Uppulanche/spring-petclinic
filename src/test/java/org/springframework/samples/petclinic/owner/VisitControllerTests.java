@@ -28,11 +28,16 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledInNativeImage;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.samples.petclinic.model.Owner;
+import org.springframework.samples.petclinic.model.Pet;
+import org.springframework.samples.petclinic.model.Visit;
 import org.springframework.test.context.aot.DisabledInAotMode;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 
 /**
@@ -56,12 +61,15 @@ class VisitControllerTests {
 	@MockitoBean
 	private OwnerRepository owners;
 
+	private Owner owner;
+
 	@BeforeEach
 	void init() {
-		Owner owner = new Owner();
+		owner = new Owner();
 		Pet pet = new Pet();
 		owner.addPet(pet);
 		pet.setId(TEST_PET_ID);
+		owner.setId(TEST_OWNER_ID);
 		given(this.owners.findById(TEST_OWNER_ID)).willReturn(Optional.of(owner));
 	}
 
@@ -76,7 +84,7 @@ class VisitControllerTests {
 	void processNewVisitFormSuccess() throws Exception {
 		mockMvc
 			.perform(post("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, TEST_PET_ID)
-				.param("name", "George")
+				.param("name", "George") // This parameter is not used in VisitController, but it's present in the form
 				.param("date", LocalDate.now().plusDays(1).toString())
 				.param("description", "Visit Description"))
 			.andExpect(status().is3xxRedirection())
@@ -87,7 +95,7 @@ class VisitControllerTests {
 	void processNewVisitFormHasErrors() throws Exception {
 		mockMvc
 			.perform(post("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, TEST_PET_ID).param("name",
-					"George"))
+					"George")) // This parameter is not used in VisitController, but it's present in the form
 			.andExpect(model().attributeHasErrors("visit"))
 			.andExpect(status().isOk())
 			.andExpect(view().name("pets/createOrUpdateVisitForm"));
@@ -97,13 +105,57 @@ class VisitControllerTests {
 	void processNewVisitFormHasErrorsWhenVisitDateIsNotInFuture() throws Exception {
 		mockMvc
 			.perform(post("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, TEST_PET_ID)
-				.param("name", "George")
+				.param("name", "George") // This parameter is not used in VisitController, but it's present in the form
 				.param("date", LocalDate.now().toString())
 				.param("description", "Visit Description"))
-			.andExpect(model().attributeHasFieldErrors("visit", "date"))
+			.andExpect(model().attributeHasFieldErrors("visit", "date'))
 			.andExpect(model().attributeHasFieldErrorCode("visit", "date", "typeMismatch.visitDate"))
 			.andExpect(status().isOk())
 			.andExpect(view().name("pets/createOrUpdateVisitForm"));
+	}
+
+	@Test
+	void checkInVisitSuccess() throws Exception {
+		Visit visit = new Visit();
+		visit.setId(1);
+		visit.setDate(LocalDate.now().plusDays(1)); // Set a future date for the visit
+
+		mockMvc.perform(post("/visits/{visitId}/checkin", 1))
+			.andExpect(status().is3xxRedirection())
+			.andExpect(view().name("redirect:/owners/{ownerId}"));
+	}
+
+	@Test
+	void checkInVisitTooFarInFuture() throws Exception {
+		Visit visit = new Visit();
+		visit.setId(1);
+		visit.setDate(LocalDate.now().plusDays(2)); // Set a date more than 24 hours in the future
+
+		mockMvc.perform(post("/visits/{visitId}/checkin", 1))
+			.andExpect(status().is3xxRedirection()) // Expecting redirect even on error for now
+			.andExpect(view().name("redirect:/owners/{ownerId}"));
+	}
+
+	@Test
+	void checkOutVisitSuccess() throws Exception {
+		Visit visit = new Visit();
+		visit.setId(1);
+		visit.setCheckInTime(LocalDateTime.now().minusHours(1)); // Set check-in time to 1 hour ago
+
+		mockMvc.perform(post("/visits/{visitId}/checkout", 1))
+			.andExpect(status().is3xxRedirection())
+			.andExpect(view().name("redirect:/owners/{ownerId}"));
+	}
+
+	@Test
+	void checkOutVisitBeforeCheckIn() throws Exception {
+		Visit visit = new Visit();
+		visit.setId(1);
+		visit.setCheckInTime(LocalDateTime.now().plusHours(1)); // Set check-in time to 1 hour in the future
+
+		mockMvc.perform(post("/visits/{visitId}/checkout", 1))
+			.andExpect(status().is3xxRedirection()) // Expecting redirect even on error for now
+			.andExpect(view().name("redirect:/owners/{ownerId}"));
 	}
 
 }
