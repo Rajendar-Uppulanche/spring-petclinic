@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+
+<html xmlns:th="https://www.thymeleaf.org" th:replace="~{fragments/layout :: layout (~{::body},'owners')}">
+
+<body>
+
+	<h2>
+		Visits for 
+		<span th:text="${pet.name}">Pet name</span>
+	</h2>
+
+	<table class="table table-striped">
+		<tr>
+			<th>
+				<a th:href="@{/owners/{ownerId}/pets/{petId}/visits(ownerId=${owner.id},petId=${pet.id},page=${currentPage},size=${pageSize},sort='appointmentDate',direction=${direction eq 'asc' ? 'desc' : 'asc'})}" th:text="#{date}">Date</a>
+				<span th:if="${sort == 'appointmentDate'}" th:class="${direction == 'asc' ? 'glyphicon glyphicon-chevron-up' : 'glyphicon glyphicon-chevron-down'}"></span>
+			</th>
+			<th>
+				<a th:href="@{/owners/{ownerId}/pets/{petId}/visits(ownerId=${owner.id},petId=${pet.id},page=${currentPage},size=${pageSize},sort='vetName',direction=${direction eq 'asc' ? 'desc' : 'asc'})}" th:text="#{vetName}">Vet Name</a>
+				<span th:if="${sort == 'vetName'}" th:class="${direction == 'asc' ? 'glyphicon glyphicon-chevron-up' : 'glyphicon glyphicon-chevron-down'}"></span>
+			</th>
+			<th>
+				<a th:href="@{/owners/{ownerId}/pets/{petId}/visits(ownerId=${owner.id},petId=${pet.id},page=${currentPage},size=${pageSize},sort='status',direction=${direction eq 'asc' ? 'desc' : 'asc'})}" th:text="#{status}">Status</a>
+				<span th:if="${sort == 'status'}" th:class="${direction == 'asc' ? 'glyphicon glyphicon-chevron-up' : 'glyphicon glyphicon-chevron-down'}"></span>
+			</th>
+			<th>
+				<a th:href="@{/owners/{ownerId}/pets/{petId}/visits(ownerId=${owner.id},petId=${pet.id},page=${currentPage},size=${pageSize},sort='duration',direction=${direction eq 'asc' ? 'desc' : 'asc'})}" th:text="#{duration}">Duration</a>
+				<span th:if="${sort == 'duration'}" th:class="${direction == 'asc' ? 'glyphicon glyphicon-chevron-up' : 'glyphicon glyphicon-chevron-down'}"></span>
+			</th>
+			<th>
+				<a th:href="@{/owners/{ownerId}/pets/{petId}/visits(ownerId=${owner.id},petId=${pet.id},page=${currentPage},size=${pageSize},sort='description',direction=${direction eq 'asc' ? 'desc' : 'asc'})}" th:text="#{description}">Description</a>
+				<span th:if="${sort == 'description'}" th:class="${direction == 'asc' ? 'glyphicon glyphicon-chevron-up' : 'glyphicon glyphicon-chevron-down'}"></span>
+			</th>
+		</tr>
+		<tr th:each="visit : ${visits.content}">
+			<td th:text="${#temporals.format(visit.date, 'yyyy-MM-dd')}"></td>
+			<td th:text="${visit.vetName ?: 'N/A'}"></td>
+			<td th:text="${visit.status ?: 'N/A'}"></td>
+			<td th:text="${visit.duration ?: 'N/A'}"></td>
+			<td th:text="${visit.description}"></td>
+		</tr>
+	</table>
+
+	<div class="container-fluid">
+		<div class="row">
+			<div class="col-md-12">
+				<p th:text="#{showingVisits(visits.currentPage, visits.pageSize, visits.totalElements)}"></p>
+			</div>
+		</div>
+		<div class="row">
+			<div class="col-md-12">
+				<ul class="pagination">
+					<li th:classappend="${!visits.hasPrevious() ? 'disabled' : ''}">
+						<a th:href="@{/owners/{ownerId}/pets/{petId}/visits(ownerId=${owner.id},petId=${pet.id},page=${currentPage - 1},size=${pageSize},sort=${sort},direction=${direction})}" th:text="#{previous}">Previous</a>
+					</li>
+					<li th:each="pageNumber : ${#numbers.sequence(1, visits.totalPages)}" th:classappend="${pageNumber == currentPage ? 'active' : ''}">
+						<a th:href="@{/owners/{ownerId}/pets/{petId}/visits(ownerId=${owner.id},petId=${pet.id},page=${pageNumber},size=${pageSize},sort=${sort},direction=${direction})}" th:text="${pageNumber}">1</a>
+					</li>
+					<li th:classappend="${!visits.hasNext() ? 'disabled' : ''}">
+						<a th:href="@{/owners/{ownerId}/pets/{petId}/visits(ownerId=${owner.id},petId=${pet.id},page=${currentPage + 1},size=${pageSize},sort=${sort},direction=${direction})}" th:text="#{next}">Next</a>
+					</li>
+				</ul>
+			</div>
+		</div>
+	</div>
+
+	<div class="form-group">
+		<div class="col-sm-offset-2 col-sm-10">
+			<a class="btn btn-primary"
+			   th:href="@{/owners/{ownerId}/pets/{petId}/visits/new(ownerId=${owner.id},petId=${pet.id})}"
+			   th:text="#{addVisit}">Add Visit</a>
+		</div>
+	</div>
+
+	<div class="form-group">
+		<div class="col-sm-offset-2 col-sm-10">
+			<a class="btn btn-primary"
+			   th:href="@{/owners/{ownerId}/pets/{petId}/visits/export(ownerId=${owner.id},petId=${pet.id})}"
+			   th:text="#{exportToCsv}"
+			   th:disabled="${visits.content.empty}">Export to CSV</a>
+		</div>
+	</div>
+
+	<div class="form-group">
+		<label for="pageSize" class="col-sm-2 control-label" th:text="#{visitsPerPage}">Visits per page:</label>
+		<div class="col-sm-10">
+			<select id="pageSize" name="pageSize" onchange="this.form.submit()">
+				<option value="10" th:selected="${pageSize == 10}">10</option>
+				<option value="25" th:selected="${pageSize == 25}">25</option>
+				<option value="50" th:selected="${pageSize == 50}">50</option>
+			</select>
+		</div>
+	</div>
+
+</body>
+
+</html>
