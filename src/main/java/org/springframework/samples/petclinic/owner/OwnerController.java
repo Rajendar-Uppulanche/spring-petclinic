@@ -44,6 +44,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
  * @author Arjen Poutsma
  * @author Michael Isvy
  * @author Wick Dynex
+ * @author Synapse Builder
  */
 @Controller
 class OwnerController {
@@ -52,8 +53,11 @@ class OwnerController {
 
 	private final OwnerRepository owners;
 
-	public OwnerController(OwnerRepository owners) {
+	private final VisitService visitService;
+
+	public OwnerController(OwnerRepository owners, VisitService visitService) {
 		this.owners = owners;
+		this.visitService = visitService;
 	}
 
 	@InitBinder
@@ -174,6 +178,50 @@ class OwnerController {
 				"Owner not found with id: " + ownerId + ". Please ensure the ID is correct "));
 		mav.addObject(owner);
 		return mav;
+	}
+
+	/**
+	 * Handles the check-in action for a visit.
+	 * @param ownerId The ID of the owner.
+	 * @param petId The ID of the pet.
+	 * @param visitId The ID of the visit to check in.
+	 * @param redirectAttributes For flash messages.
+	 * @return Redirect to the owner details page.
+	 */
+	@PostMapping("/owners/{ownerId}/pets/{petId}/visits/{visitId}/check_in")
+	public String checkInVisit(@PathVariable("ownerId") int ownerId,
+			@PathVariable("petId") int petId,
+			@PathVariable("visitId") int visitId,
+			RedirectAttributes redirectAttributes) {
+		try {
+			visitService.checkIn(visitId);
+			redirectAttributes.addFlashAttribute("message", "Visit checked in successfully.");
+		} catch (IllegalArgumentException e) {
+			redirectAttributes.addFlashAttribute("error", "Failed to check in visit: " + e.getMessage());
+		}
+		return "redirect:/owners/{ownerId}";
+	}
+
+	/**
+	 * Handles the check-out action for a visit.
+	 * @param ownerId The ID of the owner.
+	 * @param petId The ID of the pet.
+	 * @param visitId The ID of the visit to check out.
+	 * @param redirectAttributes For flash messages.
+	 * @return Redirect to the owner details page.
+	 */
+	@PostMapping("/owners/{ownerId}/pets/{petId}/visits/{visitId}/check_out")
+	public String checkOutVisit(@PathVariable("ownerId") int ownerId,
+			@PathVariable("petId") int petId,
+			@PathVariable("visitId") int visitId,
+			RedirectAttributes redirectAttributes) {
+		try {
+			visitService.checkOut(visitId);
+			redirectAttributes.addFlashAttribute("message", "Visit checked out successfully.");
+		} catch (IllegalArgumentException e) {
+			redirectAttributes.addFlashAttribute("error", "Failed to check out visit: " + e.getMessage());
+		}
+		return "redirect:/owners/{ownerId}";
 	}
 
 }
