@@ -16,6 +16,8 @@
 package org.springframework.samples.petclinic.vet;
 
 import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -36,14 +38,18 @@ import org.springframework.web.bind.annotation.ResponseBody;
 class VetController {
 
 	private final VetRepository vetRepository;
+	private final SpecialtyRepository specialtyRepository;
 
-	public VetController(VetRepository vetRepository) {
+	public VetController(VetRepository vetRepository, SpecialtyRepository specialtyRepository) {
 		this.vetRepository = vetRepository;
+		this.specialtyRepository = specialtyRepository;
 	}
 
 	@GetMapping("/vets.html")
 	public String showVetList(@RequestParam(defaultValue = "1") int page, Model model) {
 		Page<Vet> paginated = findPaginated(page);
+		Set<Specialty> specialties = new TreeSet<>(specialtyRepository.findAll());
+		model.addAttribute("specialties", specialties);
 		return addPaginationModel(page, paginated, model);
 	}
 
