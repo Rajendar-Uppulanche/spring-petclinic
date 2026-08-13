@@ -30,6 +30,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter; 
 import java.util.List;
 import java.util.Optional;
 
@@ -50,6 +51,8 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.hamcrest.Matchers.hasEntry; 
+import static org.hamcrest.Matchers.containsString; 
 
 /**
  * Test class for {@link OwnerController}
@@ -83,7 +86,8 @@ class OwnerControllerTests {
 		dog.setName("dog");
 		max.setType(dog);
 		max.setName("Max");
-		max.setBirthDate(LocalDate.now());
+		// Set a specific birth date for testing age calculation
+		max.setBirthDate(LocalDate.now().minusYears(2).minusMonths(5)); // 2 years, 5 months old
 		george.addPet(max);
 		max.setId(1);
 		return george;
@@ -220,7 +224,7 @@ class OwnerControllerTests {
 			.andExpect(view().name("redirect:/owners/{ownerId}"));
 	}
 
-	@Test
+	@Test	
 	void processUpdateOwnerFormUnchangedSuccess() throws Exception {
 		mockMvc.perform(post("/owners/{ownerId}/edit", TEST_OWNER_ID))
 			.andExpect(status().is3xxRedirection())
@@ -243,6 +247,11 @@ class OwnerControllerTests {
 
 	@Test
 	void showOwner() throws Exception {
+		Owner george = george(); // Get the owner with the specific birth date
+		Pet max = george.getPet("Max");
+		String expectedAge = org.springframework.samples.petclinic.util.PetAgeCalculator.calculateAge(max.getBirthDate());
+		String formattedBirthDate = max.getBirthDate().format(DateTimeFormatter.ofPattern("yyyy/MM/dd"));
+
 		mockMvc.perform(get("/owners/{ownerId}", TEST_OWNER_ID))
 			.andExpect(status().isOk())
 			.andExpect(model().attribute("owner", hasProperty("lastName", is("Franklin"))))
@@ -253,7 +262,10 @@ class OwnerControllerTests {
 			.andExpect(model().attribute("owner", hasProperty("pets", not(empty()))))
 			.andExpect(model().attribute("owner",
 					hasProperty("pets", hasItem(hasProperty("visits", hasSize(greaterThan(0)))))))
-			.andExpect(view().name("owners/ownerDetails"));
+			.andExpect(model().attributeExists("petAges")) 
+			.andExpect(model().attribute("petAges", hasEntry(max.getId(), expectedAge))) 
+			.andExpect(view().name("owners/ownerDetails"))
+			.andExpect(content().string(containsString(formattedBirthDate + " (<span class=\"text-muted font-italic\">" + expectedAge + "</span>)"))); 
 	}
 
 	@Test
