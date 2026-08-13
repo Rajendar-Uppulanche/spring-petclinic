@@ -37,9 +37,12 @@ import org.springframework.samples.petclinic.owner.Pet;
 import org.springframework.samples.petclinic.owner.PetType;
 import org.springframework.samples.petclinic.owner.PetTypeRepository;
 import org.springframework.samples.petclinic.owner.Visit;
+import org.springframework.samples.petclinic.owner.VisitRepository;
+import org.springframework.samples.petclinic.owner.VisitStatus;
 import org.springframework.samples.petclinic.vet.Vet;
 import org.springframework.samples.petclinic.vet.VetRepository;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 /**
  * Integration test of the Service and the Repository layer.
@@ -83,6 +86,9 @@ class ClinicServiceTests {
 
 	@Autowired
 	protected VetRepository vets;
+
+	@Autowired
+	protected VisitRepository visits;
 
 	private final Pageable pageable = Pageable.unpaged();
 
@@ -231,7 +237,9 @@ class ClinicServiceTests {
 
 		assertThat(pet7.getVisits()) //
 			.hasSize(found + 1) //
-			.allMatch(value -> value.getId() != null);
+			.element(0)
+			.extracting(Visit::getDate)
+			.isNotNull();
 	}
 
 	@Test
@@ -312,4 +320,94 @@ class ClinicServiceTests {
 		assertThat(owner2.getPet("samepetname")).isNotNull();
 	}
 
+	@Test
+	@Transactional
+	void shouldHaveDefaultStatusScheduledForNewVisit() {
+		Optional<Owner> optionalOwner = this.owners.findById(6);
+		assertThat(optionalOwner).isPresent();
+		Owner owner6 = optionalOwner.get();
+
+		Pet pet7 = owner6.getPet(7);
+		Visit visit = new Visit();
+		visit.setDescription("New visit with default status");
+
+		owner6.addVisit(pet7.getId(), visit);
+		this.owners.save(owner6);
+
+		Optional<Visit> savedVisitOptional = this.visits.findById(visit.getId());
+		assertThat(savedVisitOptional).isPresent();
+		Visit savedVisit = savedVisitOptional.get();
+		assertThat(savedVisit.getStatus()).isEqualTo(VisitStatus.SCHEDULED);
+	}
+
+	@Test
+	@Transactional
+	void shouldUpdateVisitStatusToInProgressFromScheduled() {
+		Optional<Owner> optionalOwner = this.owners.findById(6);
+		assertThat(optionalOwner).isPresent();
+		Owner owner6 = optionalOwner.get();
+
+		Pet pet7 = owner6.getPet(7);
+		Visit visit = new Visit();
+		visit.setDescription("Visit to update status");
+		owner6.addVisit(pet7.getId(), visit);
+		this.owners.save(owner6);
+
+		Optional<Visit> savedVisitOptional = this.visits.findById(visit.getId());
+		assertThat(savedVisitOptional).isPresent();
+		Visit savedVisit = savedVisitOptional.get();
+		assertThat(savedVisit.getStatus()).isEqualTo(VisitStatus.SCHEDULED);
+
+		savedVisit.setStatus(VisitStatus.IN_PROGRESS);
+		this.visits.save(savedVisit);
+
+		Optional<Visit> updatedVisitOptional = this.visits.findById(visit.getId());
+		assertThat(updatedVisitOptional).isPresent();
+		Visit updatedVisit = updatedVisitOptional.get();
+		assertThat(updatedVisit.getStatus()).isEqualTo(VisitStatus.IN_PROGRESS);
+	}
+
+	@Test
+	@Transactional
+	void shouldNotUpdateVisitStatusFromCompletedToScheduled() {
+		Optional<Owner> optionalOwner = this.owners.findById(6);
+		assertThat(optionalOwner).isPresent();
+		Owner owner6 = optionalOwner.get();
+
+		Pet pet7 = owner6.getPet(7);
+		Visit visit = new Visit();
+		visit.setDescription("Completed visit");
+		visit.setStatus(VisitStatus.COMPLETED);
+		owner6.addVisit(pet7.getId(), visit);
+		this.owners.save(owner6);
+
+		Optional<Visit> savedVisitOptional = this.visits.findById(visit.getId());
+		assertThat(savedVisitOptional).isPresent();
+		Visit savedVisit = savedVisitOptional.get();
+		assertThat(savedVisit.getStatus()).isEqualTo(VisitStatus.COMPLETED);
+
+		assertThat(savedVisit.isValidTransition(VisitStatus.SCHEDULED)).isFalse();
+	}
+
+	@Test
+	@Transactional
+	void shouldNotUpdateVisitStatusFromCancelledToInProgress() {
+		Optional<Owner> optionalOwner = this.owners.findById(6);
+		assertThat(optionalOwner).isPresent();
+		Owner owner6 = optionalOwner.get();
+
+		Pet pet7 = owner6.getPet(7);
+		Visit visit = new Visit();
+		visit.setDescription("Cancelled visit");
+		visit.setStatus(VisitStatus.CANCELLED);
+		owner6.addVisit(pet7.getId(), visit);
+		this.owners.save(owner6);
+
+		Optional<Visit> savedVisitOptional = this.visits.findById(visit.getId());
+		assertThat(savedVisitOptional).isPresent();
+		Visit savedVisit = savedVisitOptional.get();
+		assertThat(savedVisit.getStatus()).isEqualTo(VisitStatus.CANCELLED);
+
+		assertThat(savedVisit.isValidTransition(VisitStatus.IN_PROGRESS)).isFalse();
+	}
 }

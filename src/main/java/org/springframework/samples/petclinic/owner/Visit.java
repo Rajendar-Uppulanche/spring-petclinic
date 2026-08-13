@@ -24,6 +24,8 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 
 /**
  * Simple JavaBean domain object representing a visit.
@@ -42,11 +44,16 @@ public class Visit extends BaseEntity {
 	@NotBlank
 	private String description;
 
+	@Enumerated(EnumType.STRING)
+	@Column(name = "status")
+	private VisitStatus status;
+
 	/**
 	 * Creates a new instance of Visit for tomorrow
 	 */
 	public Visit() {
 		this.date = LocalDate.now().plusDays(1);
+		this.status = VisitStatus.SCHEDULED;
 	}
 
 	public LocalDate getDate() {
@@ -65,4 +72,35 @@ public class Visit extends BaseEntity {
 		this.description = description;
 	}
 
+	public VisitStatus getStatus() {
+		return status;
+	}
+
+	public void setStatus(VisitStatus status) {
+		this.status = status;
+	}
+
+	/**
+	 * Validates if a transition from the current status to a new status is allowed.
+	 * @param newStatus The status to transition to.
+	 * @return true if the transition is valid, false otherwise.
+	 */
+	public boolean isValidTransition(VisitStatus newStatus) {
+		if (this.status == newStatus) {
+			return true; // No change is always valid
+		}
+
+		switch (this.status) {
+			case SCHEDULED:
+				return newStatus == VisitStatus.IN_PROGRESS || newStatus == VisitStatus.CANCELLED;
+			case IN_PROGRESS:
+				return newStatus == VisitStatus.COMPLETED;
+			case COMPLETED:
+				return false; // Completed visits cannot transition to any other status
+			case CANCELLED:
+				return false; // Cancelled visits cannot transition to any other status
+			default:
+				return false;
+		}
+	}
 }
