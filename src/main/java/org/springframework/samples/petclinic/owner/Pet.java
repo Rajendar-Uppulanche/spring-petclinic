@@ -16,6 +16,7 @@
 package org.springframework.samples.petclinic.owner;
 
 import java.time.LocalDate;
+import java.time.Period;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.Set;
@@ -80,6 +81,38 @@ public class Pet extends NamedEntity {
 
 	public void addVisit(Visit visit) {
 		getVisits().add(visit);
+	}
+
+	/**
+	 * Calculates the age of the pet based on its birth date.
+	 * @return A string representing the pet's age in "X year(s) Y month(s)" format,
+	 *         or "Age unknown" if the birth date is null or in the future.
+	 */
+	public String getAge() {
+		if (this.birthDate == null || this.birthDate.isAfter(LocalDate.now())) {
+			return "Age unknown";
+		}
+		LocalDate today = LocalDate.now();
+		Period p = Period.between(this.birthDate, today);
+		int years = p.getYears();
+		int months = p.getMonths();
+
+		StringBuilder ageString = new StringBuilder();
+		if (years > 0) {
+			ageString.append(years).append(" year").append(years > 1 ? "s" : "");
+		}
+		if (months > 0) {
+			if (years > 0) {
+				ageString.append(" ");
+			}
+			ageString.append(months).append(" month").append(months > 1 ? "s" : "");
+		}
+
+		if (ageString.length() == 0) {
+			// If years and months are both 0, it means the pet is less than a month old.
+			return "0 years 0 months";
+		}
+		return ageString.toString().trim();
 	}
 
 }
