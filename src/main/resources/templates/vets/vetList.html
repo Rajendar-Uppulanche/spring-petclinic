@@ -17,8 +17,10 @@
       <tr th:each="vet : ${listVets}">
         <td th:text="${vet.firstName + ' ' + vet.lastName}"></td>
         <td>
-          <span th:each="specialty : ${vet.specialties}" th:text="${specialty.name + ' '}" /> <span
-            th:if="${vet.nrOfSpecialties == 0}" th:text="#{none}">none</span>
+          <div class="specialty-badges-container">
+            <span th:each="specialty : ${vet.specialties}" th:text="${specialty.name}" class="specialty-badge" th:classappend="${specialty.name.toLowerCase().replace(' ', '-') + '-badge'}"></span>
+            <span th:if="${vet.specialties.isEmpty()}" th:text="#{generalPractice}" class="specialty-badge general-practice-badge">General Practice</span>
+          </div>
         </td>
       </tr>
     </tbody>
