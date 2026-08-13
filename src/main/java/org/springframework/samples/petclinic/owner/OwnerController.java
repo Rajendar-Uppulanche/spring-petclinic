@@ -88,7 +88,7 @@ class OwnerController {
 
 	@GetMapping("/owners/find")
 	public String initFindForm() {
-		return "owners/findOwners";
+		return "owners/searchOwners";
 	}
 
 	@GetMapping("/owners")
@@ -108,7 +108,7 @@ class OwnerController {
 		if (ownersResults.isEmpty()) {
 			// no owners found
 			result.rejectValue("lastName", "notFound", "not found");
-			return "owners/findOwners";
+			return "owners/searchOwners";
 		}
 
 		if (ownersResults.getTotalElements() == 1) {
