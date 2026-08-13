@@ -18,6 +18,8 @@ package org.springframework.samples.petclinic.owner;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.HashMap; 
+import java.util.Map;     
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -37,6 +39,7 @@ import org.springframework.web.servlet.ModelAndView;
 import jakarta.validation.Valid;
 
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.samples.petclinic.util.PetAgeCalculator; 
 
 /**
  * @author Juergen Hoeller
@@ -125,7 +128,7 @@ class OwnerController {
 		List<Owner> listOwners = paginated.getContent();
 		model.addAttribute("currentPage", page);
 		model.addAttribute("totalPages", paginated.getTotalPages());
-		model.addAttribute("totalItems", paginated.getTotalElements());
+		model.addAttribute("totalItems", paginated.getTotalElements());		
 		model.addAttribute("listOwners", listOwners);
 		return "owners/ownersList";
 	}
@@ -173,6 +176,14 @@ class OwnerController {
 		Owner owner = optionalOwner.orElseThrow(() -> new IllegalArgumentException(
 				"Owner not found with id: " + ownerId + ". Please ensure the ID is correct "));
 		mav.addObject(owner);
+
+		// Calculate and add pet ages to the model
+		Map<Integer, String> petAges = new HashMap<>();
+		for (Pet pet : owner.getPets()) {
+			petAges.put(pet.getId(), PetAgeCalculator.calculateAge(pet.getBirthDate()));
+		}
+		mav.addObject("petAges", petAges);
+
 		return mav;
 	}
 
