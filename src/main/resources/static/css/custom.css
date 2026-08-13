@@ -1,0 +1,34 @@
+/* Custom styles for speciality badges */
+.badge-specialty {
+    color: #fff;
+    font-size: 0.75rem;
+    padding: 3px 8px;
+    border-radius: 12px;
+    margin-right: 5px; /* Add some spacing between badges */
+    display: inline-block; /* Ensure padding and margin work correctly */
+    margin-bottom: 3px; /* For multi-line badges */
+}
+
+.badge-radiology {
+    background-color: #6F42C1; /* Purple */
+}
+
+.badge-surgery {
+    background-color: #DC3545; /* Red */
+}
+
+.badge-dentistry {
+    background-color: #FD7E14; /* Orange */
+}
+
+.badge-internal-medicine {
+    background-color: #0D6EFD; /* Blue */
+}
+
+.badge-other {
+    background-color: #6C757D; /* Grey for other specialties */
+}
+
+.badge-general-practice {
+    background-color: #6C757D; /* Grey for General Practice */
+}
