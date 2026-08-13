@@ -19,6 +19,8 @@ import java.time.LocalDate;
 import java.util.Map;
 import java.util.Optional;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.WebDataBinder;
@@ -27,9 +29,12 @@ import org.springframework.web.bind.annotation.InitBinder;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 
 import jakarta.validation.Valid;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.web.server.ResponseStatusException;
 
 /**
  * @author Juergen Hoeller
@@ -43,9 +48,13 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 class VisitController {
 
 	private final OwnerRepository owners;
+	private final VisitRepository visits;
+	private final VisitStatusService visitStatusService;
 
-	public VisitController(OwnerRepository owners) {
+	public VisitController(OwnerRepository owners, VisitRepository visits, VisitStatusService visitStatusService) {
 		this.owners = owners;
+		this.visits = visits;
+		this.visitStatusService = visitStatusService;
 	}
 
 	@InitBinder
@@ -76,6 +85,8 @@ class VisitController {
 		model.put("owner", owner);
 
 		Visit visit = new Visit();
+		// FR-045: Set default status for new visits
+		visit.setStatus(VisitStatus.SCHEDULED); // Set default status
 		pet.addVisit(visit);
 		return visit;
 	}
@@ -111,4 +122,31 @@ class VisitController {
 		return "redirect:/owners/{ownerId}";
 	}
 
+	/**
+	 * FR-043: API endpoint to update a visit's status.
+	 * Allows authorized staff to update a visit's status, enforcing business rules.
+	 * @param visitId The ID of the visit to update.
+	 * @param newStatus The new status to set for the visit.
+	 * @return ResponseEntity with updated Visit or error.
+	 */
+	@PutMapping("/visits/{visitId}/status")
+	public ResponseEntity<Visit> updateVisitStatus(@PathVariable("visitId") int visitId,
+											   @RequestBody VisitStatus newStatus) {
+		Optional<Visit> optionalVisit = visits.findById(visitId);
+		if (optionalVisit.isEmpty()) {
+			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Visit not found with ID: " + visitId);
+		}
+
+		Visit visit = optionalVisit.get();
+		VisitStatus currentStatus = visit.getStatus();
+
+		if (!visitStatusService.isValidTransition(currentStatus, newStatus)) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+					"Invalid status transition from " + currentStatus + " to " + newStatus);
+		}
+
+		visit.setStatus(newStatus);
+		visits.save(visit);
+		return ResponseEntity.ok(visit);
+	}
 }
