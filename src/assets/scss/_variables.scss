@@ -1,0 +1,17 @@
+// Bootstrap variable overrides and custom variables
+
+// Primary accent color
+$primary: #6c757d; // Changed from green to Bootstrap secondary grey
+
+// Other common colors (example, not part of the change request but for context)
+$secondary: #6c757d;
+$success: #28a745;
+$info: #17a2b8;
+$warning: #ffc107;
+$danger: #dc3545;
+$light: #f8f9fa;
+$dark: #343a40;
+
+// Font sizes, etc. (example)
+$font-size-base: 1rem;
+$h1-font-size: $font-size-base * 2.5;
