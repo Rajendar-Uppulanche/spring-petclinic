@@ -16,6 +16,7 @@
 package org.springframework.samples.petclinic.owner;
 
 import java.time.LocalDate;
+import java.time.Period;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.Set;
@@ -80,6 +81,46 @@ public class Pet extends NamedEntity {
 
 	public void addVisit(Visit visit) {
 		getVisits().add(visit);
+	}
+
+	/**
+	 * Calculates the age of the pet in years and months.
+	 * @return A string representing the pet's age (e.g., "2 years 3 months"), or "N/A" if birth date is null.
+	 */
+	public String getAge() {
+		if (this.birthDate == null) {
+			return "N/A";
+		}
+		LocalDate today = LocalDate.now();
+		if (this.birthDate.isAfter(today)) {
+			return "Future date"; // Should not happen with validation, but good for robustness
+		}
+
+		Period age = Period.between(this.birthDate, today);
+		int years = age.getYears();
+		int months = age.getMonths();
+
+		StringBuilder ageString = new StringBuilder();
+		if (years > 0) {
+			ageString.append(years).append(years == 1 ? " year" : " years");
+		}
+		if (months > 0) {
+			if (years > 0) {
+				ageString.append(" ");
+			}
+			ageString.append(months).append(months == 1 ? " month" : " months");
+		}
+
+		if (ageString.length() == 0) {
+			// If both years and months are 0, it means it's less than a month old.
+			// Or if birthDate is today.
+			if (this.birthDate.isEqual(today)) {
+				return "newborn";
+			} else {
+				return "less than a month";
+			}
+		}
+		return ageString.toString().trim();
 	}
 
 }
