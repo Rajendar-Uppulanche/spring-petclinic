@@ -1,0 +1,16 @@
+// src/styles/components/_links.scss
+a {
+  color: $primary-blue; // Changed to new blue
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.cancel-link {
+  color: $text-color; // Ensure it's a standard text color, not primary blue
+  text-decoration: underline; // Explicitly make it look like a link
+  cursor: pointer;
+  // No padding, background, or border to avoid button-like appearance
+}
