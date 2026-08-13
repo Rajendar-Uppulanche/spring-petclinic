@@ -1,0 +1,19 @@
+// src/styles/components/_buttons.scss
+.btn {
+  padding: 10px 15px;
+  border: 1px solid $border-color;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  text-decoration: none;
+  display: inline-block;
+}
+
+.btn-primary {
+  background-color: $primary-blue; // Changed to new blue
+  color: white;
+  border-color: $primary-blue;
+}
+
+// Removed .btn-cancel from here to ensure it's not styled as a button.
+// It will be handled as a link.
