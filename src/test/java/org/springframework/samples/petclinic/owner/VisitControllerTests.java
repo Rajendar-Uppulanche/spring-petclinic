@@ -16,9 +16,13 @@
 
 package org.springframework.samples.petclinic.owner;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
@@ -31,6 +35,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.test.context.aot.DisabledInAotMode;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.http.MediaType;
 
 import java.time.LocalDate;
 import java.util.Optional;
@@ -50,19 +55,41 @@ class VisitControllerTests {
 
 	private static final int TEST_PET_ID = 1;
 
+	private static final int TEST_VISIT_ID = 1;
+
 	@Autowired
 	private MockMvc mockMvc;
 
 	@MockitoBean
 	private OwnerRepository owners;
 
+	@MockitoBean
+	private VisitRepository visits;
+
+	@MockitoBean
+	private VisitStatusService visitStatusService;
+
+	private Owner owner;
+	private Pet pet;
+	private Visit visit;
+
 	@BeforeEach
 	void init() {
-		Owner owner = new Owner();
-		Pet pet = new Pet();
+		owner = new Owner();
+		pet = new Pet();
 		owner.addPet(pet);
 		pet.setId(TEST_PET_ID);
 		given(this.owners.findById(TEST_OWNER_ID)).willReturn(Optional.of(owner));
+
+		visit = new Visit();
+		visit.setId(TEST_VISIT_ID);
+		visit.setDate(LocalDate.now().plusDays(1));
+		visit.setDescription("Routine checkup");
+		visit.setStatus(VisitStatus.SCHEDULED);
+		given(this.visits.findById(TEST_VISIT_ID)).willReturn(Optional.of(visit));
+
+		// Default behavior for visitStatusService for valid transitions
+		given(visitStatusService.isValidTransition(any(VisitStatus.class), any(VisitStatus.class))).willReturn(true);
 	}
 
 	@Test
@@ -81,6 +108,9 @@ class VisitControllerTests {
 				.param("description", "Visit Description"))
 			.andExpect(status().is3xxRedirection())
 			.andExpect(view().name("redirect:/owners/{ownerId}"));
+
+		// Verify that the saved visit has the default status
+		verify(owners).save(any(Owner.class));
 	}
 
 	@Test
@@ -106,4 +136,90 @@ class VisitControllerTests {
 			.andExpect(view().name("pets/createOrUpdateVisitForm"));
 	}
 
+	// New tests for Visit Status functionality
+
+	@Test
+	void loadPetWithVisitSetsDefaultStatus() throws Exception {
+		mockMvc.perform(get("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, TEST_PET_ID))
+			.andExpect(status().isOk())
+			.andExpect(model().attributeExists("visit"))
+			.andExpect(model().attribute("visit", org.hamcrest.Matchers.hasProperty("status", org.hamcrest.Matchers.is(VisitStatus.SCHEDULED))));
+	}
+
+	@Test
+	void updateVisitStatusSuccess() throws Exception {
+		Visit existingVisit = new Visit();
+		existingVisit.setId(TEST_VISIT_ID);
+		existingVisit.setStatus(VisitStatus.SCHEDULED);
+		given(visits.findById(TEST_VISIT_ID)).willReturn(Optional.of(existingVisit));
+		given(visitStatusService.isValidTransition(VisitStatus.SCHEDULED, VisitStatus.IN_PROGRESS)).willReturn(true);
+
+		mockMvc.perform(put("/visits/{visitId}/status", TEST_VISIT_ID)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("\"IN_PROGRESS\""))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.status").value("IN_PROGRESS"));
+
+		verify(visits).save(any(Visit.class));
+	}
+
+	@Test
+	void updateVisitStatusNotFound() throws Exception {
+		given(visits.findById(999)).willReturn(Optional.empty());
+
+		mockMvc.perform(put("/visits/{visitId}/status", 999)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("\"IN_PROGRESS\""))
+			.andExpect(status().isNotFound());
+	}
+
+	@Test
+	void updateVisitStatusInvalidTransition() throws Exception {
+		Visit existingVisit = new Visit();
+		existingVisit.setId(TEST_VISIT_ID);
+		existingVisit.setStatus(VisitStatus.COMPLETED);
+		given(visits.findById(TEST_VISIT_ID)).willReturn(Optional.of(existingVisit));
+		given(visitStatusService.isValidTransition(VisitStatus.COMPLETED, VisitStatus.SCHEDULED)).willReturn(false);
+
+		mockMvc.perform(put("/visits/{visitId}/status", TEST_VISIT_ID)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("\"SCHEDULED\""))
+			.andExpect(status().isBadRequest());
+
+		verify(visits).findById(TEST_VISIT_ID);
+	}
+
+	@Test
+	void updateVisitStatusInvalidEnumValue() throws Exception {
+		mockMvc.perform(put("/visits/{visitId}/status", TEST_VISIT_ID)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("\"INVALID_STATUS\""))
+			.andExpect(status().isBadRequest());
+	}
+
+	@Test
+	void visitStatusServiceValidTransitions() {
+		VisitStatusService service = new VisitStatusService();
+		org.junit.jupiter.api.Assertions.assertTrue(service.isValidTransition(VisitStatus.SCHEDULED, VisitStatus.IN_PROGRESS));
+		org.junit.jupiter.api.Assertions.assertTrue(service.isValidTransition(VisitStatus.SCHEDULED, VisitStatus.CANCELLED));
+		org.junit.jupiter.api.Assertions.assertTrue(service.isValidTransition(VisitStatus.IN_PROGRESS, VisitStatus.COMPLETED));
+		org.junit.jupiter.api.Assertions.assertTrue(service.isValidTransition(VisitStatus.SCHEDULED, VisitStatus.SCHEDULED));
+		org.junit.jupiter.api.Assertions.assertTrue(service.isValidTransition(VisitStatus.IN_PROGRESS, VisitStatus.IN_PROGRESS));
+		org.junit.jupiter.api.Assertions.assertTrue(service.isValidTransition(VisitStatus.COMPLETED, VisitStatus.COMPLETED));
+		org.junit.jupiter.api.Assertions.assertTrue(service.isValidTransition(VisitStatus.CANCELLED, VisitStatus.CANCELLED));
+	}
+
+	@Test
+	void visitStatusServiceInvalidTransitions() {
+		VisitStatusService service = new VisitStatusService();
+		org.junit.jupiter.api.Assertions.assertFalse(service.isValidTransition(VisitStatus.CANCELLED, VisitStatus.SCHEDULED));
+		org.junit.jupiter.api.Assertions.assertFalse(service.isValidTransition(VisitStatus.CANCELLED, VisitStatus.IN_PROGRESS));
+		org.junit.jupiter.api.Assertions.assertFalse(service.isValidTransition(VisitStatus.CANCELLED, VisitStatus.COMPLETED));
+		org.junit.jupiter.api.Assertions.assertFalse(service.isValidTransition(VisitStatus.COMPLETED, VisitStatus.SCHEDULED));
+		org.junit.jupiter.api.Assertions.assertFalse(service.isValidTransition(VisitStatus.COMPLETED, VisitStatus.IN_PROGRESS));
+		org.junit.jupiter.api.Assertions.assertFalse(service.isValidTransition(VisitStatus.COMPLETED, VisitStatus.CANCELLED));
+		org.junit.jupiter.api.Assertions.assertFalse(service.isValidTransition(VisitStatus.SCHEDULED, VisitStatus.COMPLETED));
+		org.junit.jupiter.api.Assertions.assertFalse(service.isValidTransition(VisitStatus.IN_PROGRESS, VisitStatus.SCHEDULED));
+		org.junit.jupiter.api.Assertions.assertFalse(service.isValidTransition(VisitStatus.IN_PROGRESS, VisitStatus.CANCELLED));
+	}
 }
