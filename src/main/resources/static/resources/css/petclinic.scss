@@ -1,0 +1,20 @@
+// Global variables
+$primary-accent-color: #007bff; // Blue (Bootstrap primary blue)
+$text-color: #333;
+
+// Some basic styles
+body {
+  font-family: Arial, sans-serif;
+  color: $text-color;
+}
+
+.btn-primary {
+  background-color: $primary-accent-color;
+  color: white;
+  border: 1px solid darken($primary-accent-color, 10%);
+}
+
+a {
+  color: $primary-accent-color;
+  text-decoration: none;
+}
