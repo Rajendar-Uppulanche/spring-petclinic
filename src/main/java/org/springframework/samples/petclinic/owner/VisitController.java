@@ -30,6 +30,10 @@ import org.springframework.web.bind.annotation.PostMapping;
 
 import jakarta.validation.Valid;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 /**
  * @author Juergen Hoeller
@@ -43,9 +47,11 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 class VisitController {
 
 	private final OwnerRepository owners;
+	private final VisitRepository visits;
 
-	public VisitController(OwnerRepository owners) {
+	public VisitController(OwnerRepository owners, VisitRepository visits) {
 		this.owners = owners;
+		this.visits = visits;
 	}
 
 	@InitBinder
@@ -111,4 +117,46 @@ class VisitController {
 		return "redirect:/owners/{ownerId}";
 	}
 
+	@PutMapping("/owners/{ownerId}/pets/{petId}/visits/{visitId}/status")
+	public String updateVisitStatus(@PathVariable int ownerId, @PathVariable int petId, @PathVariable int visitId,
+			@RequestParam("newStatus") String newStatusString, RedirectAttributes redirectAttributes) {
+
+		Optional<Owner> optionalOwner = owners.findById(ownerId);
+		Owner owner = optionalOwner.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+				"Owner not found with id: " + ownerId));
+
+		Pet pet = owner.getPet(petId);
+		if (pet == null) {
+			throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+					"Pet with id " + petId + " not found for owner with id " + ownerId + ".");
+		}
+
+		Optional<Visit> optionalVisit = visits.findById(visitId);
+		Visit visit = optionalVisit.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+				"Visit not found with id: " + visitId));
+
+		if (!pet.getVisits().contains(visit)) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+					"Visit with id " + visitId + " does not belong to pet with id " + petId + ".");
+		}
+
+		VisitStatus newStatus;
+		try {
+			newStatus = VisitStatus.valueOf(newStatusString.toUpperCase());
+		} catch (IllegalArgumentException e) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+					"Invalid status value: " + newStatusString + ". Allowed values are: SCHEDULED, IN_PROGRESS, COMPLETED, CANCELLED.");
+		}
+
+		if (!visit.isValidTransition(newStatus)) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+					"Invalid status transition from " + visit.getStatus() + " to " + newStatus + ".");
+		}
+
+		visit.setStatus(newStatus);
+		visits.save(visit);
+
+		redirectAttributes.addFlashAttribute("message", "Visit status updated successfully to " + newStatus + ".");
+		return "redirect:/owners/{ownerId}";
+	}
 }
