@@ -138,7 +138,7 @@ class OwnerControllerTests {
 		mockMvc.perform(get("/owners/find"))
 			.andExpect(status().isOk())
 			.andExpect(model().attributeExists("owner"))
-			.andExpect(view().name("owners/findOwners"));
+			.andExpect(view().name("owners/searchOwner"));
 	}
 
 	@Test
@@ -191,7 +191,7 @@ class OwnerControllerTests {
 			.andExpect(status().isOk())
 			.andExpect(model().attributeHasFieldErrors("owner", "lastName"))
 			.andExpect(model().attributeHasFieldErrorCode("owner", "lastName", "notFound"))
-			.andExpect(view().name("owners/findOwners"));
+			.andExpect(view().name("owners/searchOwner"));
 
 	}
 
