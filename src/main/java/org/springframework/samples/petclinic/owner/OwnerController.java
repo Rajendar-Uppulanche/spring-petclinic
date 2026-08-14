@@ -113,8 +113,8 @@ class OwnerController {
 
 		if (ownersResults.getTotalElements() == 1) {
 			// 1 owner found
-			owner = ownersResults.iterator().next();
-			return "redirect:/owners/" + owner.getId();
+			owners = ownersResults.iterator().next();
+			return "redirect:/owners/" + owners.getId();
 		}
 
 		// multiple owners found
@@ -131,7 +131,7 @@ class OwnerController {
 	}
 
 	private Page<Owner> findPaginatedForOwnersLastName(int page, String lastname) {
-		int pageSize = 5;
+		int pageSize = 10;
 		Pageable pageable = PageRequest.of(page - 1, pageSize);
 		return owners.findByLastNameStartingWith(lastname, pageable);
 	}
