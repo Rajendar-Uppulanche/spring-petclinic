@@ -18,6 +18,7 @@ package org.springframework.samples.petclinic.owner;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -170,9 +171,32 @@ class OwnerController {
 	public ModelAndView showOwner(@PathVariable("ownerId") int ownerId) {
 		ModelAndView mav = new ModelAndView("owners/ownerDetails");
 		Optional<Owner> optionalOwner = this.owners.findById(ownerId);
-		Owner owner = optionalOwner.orElseThrow(() -> new IllegalArgumentException(
+		Owner ownerEntity = optionalOwner.orElseThrow(() -> new IllegalArgumentException(
 				"Owner not found with id: " + ownerId + ". Please ensure the ID is correct "));
-		mav.addObject(owner);
+
+		// Map Owner entity to OwnerDetailsDto
+		OwnerDetailsDto ownerDto = new OwnerDetailsDto();
+		ownerDto.setId(ownerEntity.getId());
+		ownerDto.setFirstName(ownerEntity.getFirstName());
+		ownerDto.setLastName(ownerEntity.getLastName());
+		ownerDto.setAddress(ownerEntity.getAddress());
+		ownerDto.setCity(ownerEntity.getCity());
+		ownerDto.setTelephone(ownerEntity.getTelephone());
+
+		// Map Pet entities to PetDetailsDto and calculate visit counts
+		List<PetDetailsDto> petDtos = ownerEntity.getPets().stream().map(petEntity -> {
+			PetDetailsDto petDto = new PetDetailsDto();
+			petDto.setId(petEntity.getId());
+			petDto.setName(petEntity.getName());
+			petDto.setBirthDate(petEntity.getBirthDate());
+			petDto.setType(petEntity.getType());
+			petDto.setVisitCount(petEntity.getVisits().size()); // Calculate visit count
+			return petDto;
+		}).collect(Collectors.toList());
+
+		ownerDto.setPets(petDtos);
+
+		mav.addObject("owner", ownerDto); // Add the DTO to the model
 		return mav;
 	}
 
