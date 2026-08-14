@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Header</title>
+</head>
+<body>
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark" th:fragment="header">
+    <div class="container">
+        <a class="navbar-brand" href="/">PetClinic</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav"
+                aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ml-auto">
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/}" title="home page">Home</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/owners/find}" th:text="#{menu.searchOwner}" title="search owner">Search Owner</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/vets.html}" title="veterinarians">Veterinarians</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/oups}" title="something bad happened">Error</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+</body>
+</html>
