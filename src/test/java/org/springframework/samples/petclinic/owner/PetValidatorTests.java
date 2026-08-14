@@ -30,6 +30,7 @@ import java.util.HashMap;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Test class for {@link PetValidator}
@@ -120,6 +121,43 @@ class PetValidatorTests {
 			petValidator.validate(pet, errors);
 
 			assertTrue(errors.hasFieldErrors("birthDate"));
+		}
+
+		@Test
+		void validateWithFutureBirthDate() {
+			petType.setName(petTypeName);
+			pet.setName(petName);
+			pet.setType(petType);
+			pet.setBirthDate(LocalDate.now().plusDays(1)); // Future date
+
+			petValidator.validate(pet, errors);
+
+			assertTrue(errors.hasFieldErrors("birthDate"));
+			assertEquals("future", errors.getFieldError("birthDate").getCode());
+		}
+
+		@Test
+		void validateWithTodayBirthDate() {
+			petType.setName(petTypeName);
+			pet.setName(petName);
+			pet.setType(petType);
+			pet.setBirthDate(LocalDate.now()); // Today's date
+
+			petValidator.validate(pet, errors);
+
+			assertFalse(errors.hasFieldErrors("birthDate")); // Should be valid
+		}
+
+		@Test
+		void validateWithPastBirthDate() {
+			petType.setName(petTypeName);
+			pet.setName(petName);
+			pet.setType(petType);
+			pet.setBirthDate(LocalDate.now().minusDays(1)); // Past date
+
+			petValidator.validate(pet, errors);
+
+			assertFalse(errors.hasFieldErrors("birthDate")); // Should be valid
 		}
 
 	}
