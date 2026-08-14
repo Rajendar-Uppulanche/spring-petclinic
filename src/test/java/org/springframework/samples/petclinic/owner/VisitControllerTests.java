@@ -16,9 +16,11 @@
 
 package org.springframework.samples.petclinic.owner;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
@@ -69,7 +71,19 @@ class VisitControllerTests {
 	void initNewVisitForm() throws Exception {
 		mockMvc.perform(get("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, TEST_PET_ID))
 			.andExpect(status().isOk())
-			.andExpect(view().name("pets/createOrUpdateVisitForm"));
+			.andExpect(view().name("pets/createOrUpdateVisitForm"))
+			// UI-004: Check for updated 'Visit Date' label
+			.andExpect(content().string(containsString("Appointment Date")))
+			// UI-005: Check for updated 'Description' label
+			.andExpect(content().string(containsString("Reason for Visit")))
+			// UI-001: Check for 'Add Visit' button styling (background color)
+			.andExpect(content().string(containsString("background-color: #28A745")))
+			// UI-002: Check for 'Cancel' link styling (color)
+			.andExpect(content().string(containsString("color: #6C757D")))
+			// UI-003: Check for form card background color
+			.andExpect(content().string(containsString("background-color: #EBF5FB")))
+			// UI-006: Check for bold label styling
+			.andExpect(content().string(containsString("font-weight: 600")));
 	}
 
 	@Test
