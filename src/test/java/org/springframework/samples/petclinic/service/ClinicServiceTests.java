@@ -30,6 +30,7 @@ import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase.Replace;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.samples.petclinic.owner.Owner;
 import org.springframework.samples.petclinic.owner.OwnerRepository;
@@ -84,7 +85,7 @@ class ClinicServiceTests {
 	@Autowired
 	protected VetRepository vets;
 
-	private final Pageable pageable = Pageable.unpaged();
+	private final Pageable pageable = PageRequest.of(0, 10);
 
 	@Test
 	void shouldFindOwnersByLastName() {
