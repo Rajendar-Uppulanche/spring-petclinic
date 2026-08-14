@@ -30,7 +30,13 @@
   <form th:object="${visit}" class="form-horizontal" method="post">
     <div class="form-group has-feedback">
       <input th:replace="~{fragments/inputField :: input ('Date', 'date', 'date')}" />
-      <input th:replace="~{fragments/inputField :: input ('Description', 'description', 'text')}" />
+      <!-- Replaced input with textarea for description -->
+      <div class="form-group">
+        <label for="visit-description-textarea" th:text="#{description}">Description</label>
+        <textarea id="visit-description-textarea" th:field="*{description}" class="form-control" maxlength="500" rows="5"></textarea>
+        <span id="visit-description-char-counter" class="char-counter"></span>
+        <span th:if="${#fields.hasErrors('description')}" th:errors="*{description}" class="help-block"></span>
+      </div>
     </div>
 
     <div class="form-group">
@@ -53,6 +59,36 @@
       <td th:text=" ${visit.description}"></td>
     </tr>
   </table>
+
+  <script th:inline="javascript">
+    document.addEventListener('DOMContentLoaded', function() {
+      const descriptionTextarea = document.getElementById('visit-description-textarea');
+      const charCounter = document.getElementById('visit-description-char-counter');
+      const maxLength = 500;
+      const lowRemainingThreshold = 50;
+
+      function updateCharCounter() {
+        if (!descriptionTextarea || !charCounter) {
+          return; // Exit if elements are not found
+        }
+        const currentLength = descriptionTextarea.value.length;
+        const remaining = maxLength - currentLength;
+        charCounter.textContent = remaining + ' characters remaining';
+
+        if (remaining < lowRemainingThreshold) {
+          charCounter.classList.add('char-counter-low');
+        } else {
+          charCounter.classList.remove('char-counter-low');
+        }
+      }
+
+      if (descriptionTextarea && charCounter) {
+        descriptionTextarea.addEventListener('input', updateCharCounter);
+        // Initialize on page load
+        updateCharCounter();
+      }
+    });
+  </script>
 
 </body>
 
