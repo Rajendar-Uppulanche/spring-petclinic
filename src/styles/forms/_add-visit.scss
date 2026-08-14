@@ -1,0 +1,32 @@
+.visit-form-card {
+  background-color: #EBF5FB; /* NFR-008 */
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.visit-form-card .form-group label {
+  font-weight: 600; /* NFR-009 */
+}
+
+.visit-submit-button {
+  background-color: #28A745; /* NFR-006 */
+  color: #FFFFFF; /* NFR-006 */
+  border-color: #28A745;
+}
+
+.visit-submit-button:hover {
+  background-color: #218838;
+  border-color: #1e7e34;
+}
+
+/* NFR-007: Styling for Cancel Link (assuming a class 'visit-cancel-link' is used) */
+.visit-cancel-link {
+  color: #6C757D;
+  text-decoration: none;
+}
+
+.visit-cancel-link:hover {
+  color: #5a6268;
+  text-decoration: underline;
+}
