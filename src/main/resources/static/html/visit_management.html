@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visit Management</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 800px; margin: auto; background: #f9f9f9; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input[type="text"], input[type="date"], select, textarea { width: calc(100% - 22px); padding: 10px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 4px; }
+        button { padding: 10px 20px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background-color: #0056b3; }
+        .error { color: red; margin-bottom: 10px; }
+        #preventive-care-form-container { border: 1px dashed #ccc; padding: 10px; margin-top: 15px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Manage Pet Visits</h1>
+
+        <div id="visit-form-section">
+            <h2>Create/Edit Visit</h2>
+            <form id="visitForm">
+                <input type="hidden" id="visitId" name="id">
+
+                <label for="petId">Pet ID:</label>
+                <input type="number" id="petId" name="petId" required><br>
+
+                <label for="visitDate">Visit Date:</label>
+                <input type="date" id="visitDate" name="visitDate" required><br>
+
+                <label for="description">Description:</label>
+                <textarea id="description" name="description" rows="4"></textarea><br>
+
+                <label for="visitType">Visit Type:</label>
+                <select id="visitType" name="visitType" required>
+                    <option value="REGULAR">Regular</option>
+                    <option value="PREVENTIVE">Preventive</option>
+                </select><br>
+
+                <div id="preventiveCareDetailsSection">
+                    <!-- PreventiveCareForm will be rendered here -->
+                </div>
+
+                <button type="submit">Save Visit</button>
+                <div id="form-message" class="error"></div>
+            </form>
+        </div>
+
+        <hr>
+
+        <div id="visit-details-section">
+            <h2>Visit Details Display</h2>
+            <label for="displayVisitId">Enter Visit ID to display:</label>
+            <input type="number" id="displayVisitId" value="1">
+            <button onclick="displayVisit()">Show Details</button>
+            <div id="visit-details-output">
+                <p>Select a visit to see details.</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/components/PreventiveCareForm.js"></script>
+    <script src="/js/components/OwnerContactInfo.js"></script>
+    <script src="/js/views/VisitDetails.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const visitTypeSelect = document.getElementById('visitType');
+            const preventiveCareDetailsSection = document.getElementById('preventiveCareDetailsSection');
+
+            const togglePreventiveCareForm = () => {
+                if (visitTypeSelect.value === 'PREVENTIVE') {
+                    preventiveCareDetailsSection.innerHTML = PreventiveCareForm.render();
+                } else {
+                    preventiveCareDetailsSection.innerHTML = '';
+                }
+            };
+
+            visitTypeSelect.addEventListener('change', togglePreventiveCareForm);
+            togglePreventiveCareForm(); // Initial render
+
+            document.getElementById('visitForm').addEventListener('submit', async (event) => {
+                event.preventDefault();
+                const visitId = document.getElementById('visitId').value;
+                const petId = document.getElementById('petId').value;
+                const visitDate = document.getElementById('visitDate').value;
+                const description = document.getElementById('description').value;
+                const visitType = document.getElementById('visitType').value;
+                const formMessage = document.getElementById('form-message');
+
+                let preventiveCareDetails = null;
+                if (visitType === 'PREVENTIVE') {
+                    if (!PreventiveCareForm.isValid()) {
+                        formMessage.textContent = 'Please fill in all preventive care details.';
+                        return;
+                    }
+                    preventiveCareDetails = PreventiveCareForm.getData();
+                }
+
+                const visitData = {
+                    id: visitId ? parseInt(visitId) : null,
+                    petId: parseInt(petId),
+                    visitDate: visitDate,
+                    description: description,
+                    visitType: visitType,
+                    preventiveCareDetails: preventiveCareDetails
+                };
+
+                const method = visitData.id ? 'PUT' : 'POST';
+                const url = visitData.id ? `/api/visits/${visitData.id}` : '/api/visits';
+
+                try {
+                    const response = await fetch(url, {
+                        method: method,
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(visitData)
+                    });
+
+                    if (!response.ok) {
+                        const error = await response.json();
+                        throw new Error(error.message || 'Failed to save visit');
+                    }
+
+                    const savedVisit = await response.json();
+                    formMessage.textContent = `Visit saved successfully! ID: ${savedVisit.id}`;
+                    formMessage.style.color = 'green';
+                    document.getElementById('visitForm').reset();
+                    document.getElementById('visitId').value = '';
+                    togglePreventiveCareForm();
+                    displayVisit(savedVisit.id);
+                } catch (error) {
+                    formMessage.textContent = `Error: ${error.message}`;
+                    formMessage.style.color = 'red';
+                }
+            });
+        });
+
+        async function displayVisit(visitIdToDisplay = null) {
+            const visitId = visitIdToDisplay || document.getElementById('displayVisitId').value;
+            if (!visitId) {
+                document.getElementById('visit-details-output').innerHTML = '<p>Please enter a Visit ID.</p>';
+                return;
+            }
+            document.getElementById('visit-details-output').innerHTML = await VisitDetailsView.render(visitId);
+        }
+    </script>
+</body>
+</html>
