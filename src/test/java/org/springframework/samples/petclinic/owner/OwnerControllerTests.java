@@ -23,6 +23,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.test.context.aot.DisabledInAotMode;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -76,8 +77,7 @@ class OwnerControllerTests {
 		george.setFirstName("George");
 		george.setLastName("Franklin");
 		george.setAddress("110 W. Liberty St.");
-		george.setCity("Madison");
-		george.setTelephone("6085551023");
+		george.setCity("Madison");		george.setTelephone("6085551023");
 		Pet max = new Pet();
 		PetType dog = new PetType();
 		dog.setName("dog");
@@ -193,6 +193,89 @@ class OwnerControllerTests {
 			.andExpect(model().attributeHasFieldErrorCode("owner", "lastName", "notFound"))
 			.andExpect(view().name("owners/findOwners"));
 
+	}
+
+	@Test
+	void processFindFormShouldShowFirstPageOfOwners() throws Exception {
+		Owner owner1 = george();
+		owner1.setId(1);
+		owner1.setLastName("Franklin");
+		Owner owner2 = new Owner();
+		owner2.setId(2);
+		owner2.setLastName("Franklin");
+		Owner owner3 = new Owner();
+		owner3.setId(3);
+		owner3.setLastName("Franklin");
+		Owner owner4 = new Owner();
+		owner4.setId(4);
+		owner4.setLastName("Franklin");
+		Owner owner5 = new Owner();
+		owner5.setId(5);
+		owner5.setLastName("Franklin");
+		Owner owner6 = new Owner();
+		owner6.setId(6);
+		owner6.setLastName("Franklin");
+
+		// Simulate 6 owners, with page size 5, so 2 pages
+		Page<Owner> firstPage = new PageImpl<>(List.of(owner1, owner2, owner3, owner4, owner5), PageRequest.of(0, 5), 6);
+		Page<Owner> secondPage = new PageImpl<>(List.of(owner6), PageRequest.of(1, 5), 6);
+
+		when(this.owners.findByLastNameStartingWith(eq("Franklin"), eq(PageRequest.of(0, 5)))).thenReturn(firstPage);
+		when(this.owners.findByLastNameStartingWith(eq("Franklin"), eq(PageRequest.of(1, 5)))).thenReturn(secondPage);
+
+		mockMvc.perform(get("/owners?page=1").param("lastName", "Franklin"))
+			.andExpect(status().isOk())
+			.andExpect(view().name("owners/ownersList"))
+			.andExpect(model().attribute("listOwners", hasSize(5)))
+			.andExpect(model().attribute("currentPage", 1))
+			.andExpect(model().attribute("totalPages", 2))
+			.andExpect(model().attribute("totalItems", 6));
+
+		mockMvc.perform(get("/owners?page=2").param("lastName", "Franklin"))
+			.andExpect(status().isOk())
+			.andExpect(view().name("owners/ownersList"))
+			.andExpect(model().attribute("listOwners", hasSize(1)))
+			.andExpect(model().attribute("currentPage", 2))
+			.andExpect(model().attribute("totalPages", 2))
+			.andExpect(model().attribute("totalItems", 6));
+	}
+
+	@Test
+	void processFindFormShouldHandleEmptyLastNameWithPagination() throws Exception {
+		Owner owner1 = george();
+		owner1.setId(1);
+		owner1.setLastName("Franklin");
+		Owner owner2 = new Owner();
+		owner2.setId(2);
+		owner2.setLastName("Davis");
+
+		// Simulate 2 owners, with page size 5, so 1 page
+		Page<Owner> firstPage = new PageImpl<>(List.of(owner1, owner2), PageRequest.of(0, 5), 2);
+
+		when(this.owners.findByLastNameStartingWith(eq(""), eq(PageRequest.of(0, 5)))).thenReturn(firstPage);
+
+		mockMvc.perform(get("/owners?page=1").param("lastName", ""))
+			.andExpect(status().isOk())
+			.andExpect(view().name("owners/ownersList"))
+			.andExpect(model().attribute("listOwners", hasSize(2)))
+			.andExpect(model().attribute("currentPage", 1))
+			.andExpect(model().attribute("totalPages", 1))
+			.andExpect(model().attribute("totalItems", 2));
+	}
+
+	@Test
+	void processFindFormShouldRedirectToOneOwnerWhenOnlyOneFoundWithPagination() throws Exception {
+		Owner owner1 = george();
+		owner1.setId(TEST_OWNER_ID);
+		owner1.setLastName("Franklin");
+
+		Page<Owner> singleOwnerPage = new PageImpl<>(List.of(owner1), PageRequest.of(0, 5), 1);
+
+		when(this.owners.findByLastNameStartingWith(eq("Franklin"), any(Pageable.class))).thenReturn(singleOwnerPage);
+
+		mockMvc.perform(get("/owners?page=1").param("lastName", "Franklin"))
+			.andExpect(status().is3xxRedirection())
+			.andExpect(view().name("redirect:/owners/" + TEST_OWNER_ID));
 	}
 
 	@Test
