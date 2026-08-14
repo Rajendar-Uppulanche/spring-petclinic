@@ -2,6 +2,20 @@
 
 <html xmlns:th="https://www.thymeleaf.org" th:replace="~{fragments/layout :: layout (~{::body},'owners')}">
 
+<head>
+  <style>
+    .char-counter.warning {
+      color: #DC3545; /* Red color for warning */
+      font-weight: bold;
+    }
+    .char-counter {
+      display: block; /* Ensure it takes its own line */
+      font-size: 0.8em; /* Smaller font size */
+      margin-top: 5px; /* Some spacing */
+    }
+  </style>
+</head>
+
 <body>
 
   <h2>
@@ -30,7 +44,13 @@
   <form th:object="${visit}" class="form-horizontal" method="post">
     <div class="form-group has-feedback">
       <input th:replace="~{fragments/inputField :: input ('Date', 'date', 'date')}" />
-      <input th:replace="~{fragments/inputField :: input ('Description', 'description', 'text')}" />
+      <!-- Replaced input fragment with textarea for description and added character counter -->
+      <div class="form-group">
+        <label for="description" th:text="#{description}">Description</label>
+        <textarea id="description" th:field="*{description}" class="form-control" rows="5" maxlength="500"></textarea>
+        <span id="charCounter" class="char-counter"></span>
+        <span th:if="${#fields.hasErrors('description')}" th:errors="*{description}" class="help-inline text-danger"></span>
+      </div>
     </div>
 
     <div class="form-group">
@@ -53,6 +73,32 @@
       <td th:text=" ${visit.description}"></td>
     </tr>
   </table>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const descriptionTextarea = document.getElementById('description');
+      const charCounter = document.getElementById('charCounter');
+      const maxLength = 500;
+
+      function updateCharCounter() {
+        const currentLength = descriptionTextarea.value.length;
+        const remaining = maxLength - currentLength;
+        charCounter.textContent = remaining + ' characters remaining';
+
+        if (remaining <= 50) {
+          charCounter.classList.add('warning');
+        } else {
+          charCounter.classList.remove('warning');
+        }
+      }
+
+      // Initial update
+      updateCharCounter();
+
+      // Update on input
+      descriptionTextarea.addEventListener('input', updateCharCounter);
+    });
+  </script>
 
 </body>
 
