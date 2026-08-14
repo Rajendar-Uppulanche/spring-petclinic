@@ -81,8 +81,7 @@ class ClinicServiceTests {
 	@Autowired
 	protected PetTypeRepository types;
 
-	@Autowired
-	protected VetRepository vets;
+	@Autowired	protected VetRepository vets;
 
 	private final Pageable pageable = Pageable.unpaged();
 
@@ -93,6 +92,53 @@ class ClinicServiceTests {
 
 		owners = this.owners.findByLastNameStartingWith("Daviss", pageable);
 		assertThat(owners).isEmpty();
+	}
+
+	@Test
+	void shouldFindOwnersByLastNameWithPagination() {
+		// Test first page
+		Pageable pageable1 = PageRequest.of(0, 1); // Page 0, size 1
+		Page<Owner> ownersPage1 = this.owners.findByLastNameStartingWith("Franklin", pageable1);
+		assertThat(ownersPage1).hasSize(1);
+		assertThat(ownersPage1.getTotalElements()).isEqualTo(1); // Only one Franklin in test data
+		assertThat(ownersPage1.getTotalPages()).isEqualTo(1);
+		assertThat(ownersPage1.getContent().get(0).getLastName()).isEqualTo("Franklin");
+
+		// Test second page (should be empty if only one Franklin)
+		Pageable pageable2 = PageRequest.of(1, 1); // Page 1, size 1
+		Page<Owner> ownersPage2 = this.owners.findByLastNameStartingWith("Franklin", pageable2);
+		assertThat(ownersPage2).isEmpty();
+		assertThat(ownersPage2.getTotalElements()).isEqualTo(1);
+		assertThat(ownersPage2.getTotalPages()).isEqualTo(1);
+
+		// Test with a larger page size that covers all results
+		Pageable pageableAll = PageRequest.of(0, 10); // Page 0, size 10
+		Page<Owner> ownersPageAll = this.owners.findByLastNameStartingWith("Franklin", pageableAll);
+		assertThat(ownersPageAll).hasSize(1);
+		assertThat(ownersPageAll.getTotalElements()).isEqualTo(1);
+		assertThat(ownersPageAll.getTotalPages()).isEqualTo(1);
+
+		// Test with multiple results (e.g., "Davis")
+		Pageable pageableDavis1 = PageRequest.of(0, 1);
+		Page<Owner> davisOwners1 = this.owners.findByLastNameStartingWith("Davis", pageableDavis1);
+		assertThat(davisOwners1).hasSize(1);
+		assertThat(davisOwners1.getTotalElements()).isEqualTo(2); // Two Davis owners in test data
+		assertThat(davisOwners1.getTotalPages()).isEqualTo(2);
+		assertThat(davisOwners1.getContent().get(0).getLastName()).isEqualTo("Davis");
+
+		Pageable pageableDavis2 = PageRequest.of(1, 1);
+		Page<Owner> davisOwners2 = this.owners.findByLastNameStartingWith("Davis", pageableDavis2);
+		assertThat(davisOwners2).hasSize(1);
+		assertThat(davisOwners2.getTotalElements()).isEqualTo(2);
+		assertThat(davisOwners2.getTotalPages()).isEqualTo(2);
+		assertThat(davisOwners2.getContent().get(0).getLastName()).isEqualTo("Davis");
+
+		// Test with no results
+		Pageable pageableNoResults = PageRequest.of(0, 5);
+		Page<Owner> noOwners = this.owners.findByLastNameStartingWith("NonExistent", pageableNoResults);
+		assertThat(noOwners).isEmpty();
+		assertThat(noOwners.getTotalElements()).isEqualTo(0);
+		assertThat(noOwners.getTotalPages()).isEqualTo(0);
 	}
 
 	@Test
@@ -299,7 +345,7 @@ class ClinicServiceTests {
 
 		Pet pet2 = new Pet();
 		pet2.setName("samepetname"); // Case-insensitive duplicate name, but for a
-										// different owner
+	// different owner
 		pet2.setType(catType);
 		pet2.setBirthDate(LocalDate.now());
 		owner2.addPet(pet2);
