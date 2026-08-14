@@ -23,6 +23,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.test.context.aot.DisabledInAotMode;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -274,6 +275,48 @@ class OwnerControllerTests {
 			.andExpect(status().is3xxRedirection())
 			.andExpect(redirectedUrl("/owners/" + pathOwnerId + "/edit"))
 			.andExpect(flash().attributeExists("error"));
+	}
+
+	@Test
+	void verifyPaginatedResponseWhenMoreThanTenOwnersExist() throws Exception {
+		List<Owner> manyOwners = new java.util.ArrayList<>();
+		for (int i = 0; i < 11; i++) {
+			Owner owner = new Owner();
+			owner.setId(i + 1);
+			owner.setFirstName("FirstName" + i);
+			owner.setLastName("LastName" + i);
+			owner.setAddress("Address" + i);
+			owner.setCity("City" + i);
+			owner.setTelephone("123456789" + i);
+			manyOwners.add(owner);
+		}
+		// Mock the repository to return a page of 10 owners for the first page
+		// and the remaining 1 owner for the second page.
+		// The controller's pageSize is 10.
+		Page<Owner> firstPage = new PageImpl<>(manyOwners.subList(0, 10), PageRequest.of(0, 10), manyOwners.size());
+		Page<Owner> secondPage = new PageImpl<>(manyOwners.subList(10, 11), PageRequest.of(1, 10), manyOwners.size());
+
+		when(this.owners.findByLastNameStartingWith(eq(""), any(Pageable.class)))
+			.thenReturn(firstPage) // For page 1
+			.thenReturn(secondPage); // For page 2 (if requested)
+
+		mockMvc.perform(get("/owners?page=1").param("lastName", ""))
+			.andExpect(status().isOk())
+			.andExpect(view().name("owners/ownersList"))
+			.andExpect(model().attributeExists("currentPage", "totalPages", "totalItems", "listOwners"))
+			.andExpect(model().attribute("currentPage", is(1)))
+			.andExpect(model().attribute("totalPages", is(2))) // 11 owners, 10 per page -> 2 pages
+			.andExpect(model().attribute("totalItems", is(11L)))
+			.andExpect(model().attribute("listOwners", hasSize(10))); // First page should have 10 items
+
+		mockMvc.perform(get("/owners?page=2").param("lastName", ""))
+			.andExpect(status().isOk())
+			.andExpect(view().name("owners/ownersList"))
+			.andExpect(model().attributeExists("currentPage", "totalPages", "totalItems", "listOwners"))
+			.andExpect(model().attribute("currentPage", is(2)))
+			.andExpect(model().attribute("totalPages", is(2)))
+			.andExpect(model().attribute("totalItems", is(11L)))
+			.andExpect(model().attribute("listOwners", hasSize(1))); // Second page should have 1 item
 	}
 
 }
