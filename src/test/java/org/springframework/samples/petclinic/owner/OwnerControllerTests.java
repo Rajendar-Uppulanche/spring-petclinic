@@ -33,6 +33,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
+import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.hasItem;
@@ -86,6 +87,15 @@ class OwnerControllerTests {
 		max.setBirthDate(LocalDate.now());
 		george.addPet(max);
 		max.setId(1);
+
+		Pet fluffy = new Pet();
+		PetType cat = new PetType();
+		cat.setName("cat");
+		fluffy.setType(cat);
+		fluffy.setName("Fluffy");
+		fluffy.setBirthDate(LocalDate.now().minusYears(1));
+		george.addPet(fluffy);
+		fluffy.setId(2);
 		return george;
 	}
 
@@ -96,10 +106,24 @@ class OwnerControllerTests {
 		given(this.owners.findByLastNameStartingWith(eq("Franklin"), any(Pageable.class)))
 			.willReturn(new PageImpl<>(List.of(george)));
 
+		// Ensure visits are loaded for the test owner
+		Pet max = george.getPet("Max");
+		if (max != null) {
+			max.getVisits().clear(); // Clear existing visits to control test data
+			Visit visit1 = new Visit();
+			visit1.setDate(LocalDate.now());
+			max.addVisit(visit1);
+			Visit visit2 = new Visit();
+			visit2.setDate(LocalDate.now().minusDays(1));
+			max.addVisit(visit2);
+		}
+
+		Pet fluffy = george.getPet("Fluffy"); // Get the new pet
+		if (fluffy != null) {
+			fluffy.getVisits().clear(); // Ensure no visits for Fluffy
+		}
+
 		given(this.owners.findById(TEST_OWNER_ID)).willReturn(Optional.of(george));
-		Visit visit = new Visit();
-		visit.setDate(LocalDate.now());
-		george.getPet("Max").getVisits().add(visit);
 
 	}
 
@@ -245,14 +269,26 @@ class OwnerControllerTests {
 	void showOwner() throws Exception {
 		mockMvc.perform(get("/owners/{ownerId}", TEST_OWNER_ID))
 			.andExpect(status().isOk())
+			.andExpect(model().attributeExists("owner"))
 			.andExpect(model().attribute("owner", hasProperty("lastName", is("Franklin"))))
 			.andExpect(model().attribute("owner", hasProperty("firstName", is("George"))))
 			.andExpect(model().attribute("owner", hasProperty("address", is("110 W. Liberty St."))))
 			.andExpect(model().attribute("owner", hasProperty("city", is("Madison"))))
 			.andExpect(model().attribute("owner", hasProperty("telephone", is("6085551023"))))
 			.andExpect(model().attribute("owner", hasProperty("pets", not(empty()))))
-			.andExpect(model().attribute("owner",
-					hasProperty("pets", hasItem(hasProperty("visits", hasSize(greaterThan(0)))))))
+			.andExpect(model().attribute("owner", hasProperty("pets", hasSize(2)))) // Now 2 pets
+			.andExpect(model().attribute("owner", hasProperty("pets", hasItem(
+				allOf(
+					hasProperty("name", is("Max")),
+					hasProperty("visitCount", is(2)) // Expect 2 visits for Max
+				)
+			))))
+			.andExpect(model().attribute("owner", hasProperty("pets", hasItem(
+				allOf(
+					hasProperty("name", is("Fluffy")),
+					hasProperty("visitCount", is(0)) // Expect 0 visits for Fluffy
+				)
+			))))
 			.andExpect(view().name("owners/ownerDetails"));
 	}
 
