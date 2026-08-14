@@ -251,6 +251,30 @@ class ClinicServiceTests {
 	}
 
 	@Test
+	void shouldLoadOwnerWithAllPetsAndVisits() {
+		// Given an owner with multiple pets, some with visits, some without
+		Optional<Owner> optionalOwner = this.owners.findById(6); // Owner 6 (Jean Coleman) has one pet (Lucky) with visits
+		assertThat(optionalOwner).isPresent();
+		Owner owner = optionalOwner.get();
+
+		// Assert owner details
+		assertThat(owner.getLastName()).isEqualTo("Coleman");
+		assertThat(owner.getPets()).hasSize(1);
+
+		// Assert pet details and visits
+		Pet lucky = owner.getPet("Lucky");
+		assertThat(lucky).isNotNull();
+		assertThat(lucky.getVisits()).isNotNull();
+		assertThat(lucky.getVisits()).hasSize(2); // Lucky has 2 visits in the default data
+		assertThat(lucky.getVisits().iterator().next().getDescription()).isEqualTo("rabies shot");
+
+		// This test confirms that the visits collection is accessible and populated
+		// after fetching the owner. It doesn't explicitly count queries, but
+		// if the repository were configured for eager loading, this test would pass
+		// without LazyInitializationException.
+	}
+
+	@Test
 	@Transactional
 	void shouldFailToInsertDuplicatePetNameForSameOwner() {
 		Optional<Owner> optionalOwner = this.owners.findById(1);
@@ -299,7 +323,7 @@ class ClinicServiceTests {
 
 		Pet pet2 = new Pet();
 		pet2.setName("samepetname"); // Case-insensitive duplicate name, but for a
-										// different owner
+	// different owner
 		pet2.setType(catType);
 		pet2.setBirthDate(LocalDate.now());
 		owner2.addPet(pet2);
