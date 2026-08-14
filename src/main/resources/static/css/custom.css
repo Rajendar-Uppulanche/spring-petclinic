@@ -1,0 +1,44 @@
+/* Styles for the Add Visit form */
+
+/* Bold styling for all form field labels */
+.form-horizontal .control-label {
+    font-weight: 600;
+}
+
+/* Style the 'Add Visit' Submit Button */
+.btn-success {
+    background-color: #28A745; /* Green */
+    color: white;
+    border-color: #28A745; /* Ensure border matches background */
+}
+.btn-success:hover,
+.btn-success:focus {
+    background-color: #218838; /* Darker green on hover/focus */
+    border-color: #1e7e34;
+}
+
+/* Style the 'Cancel' Link */
+/* Assuming the cancel link is a standard anchor tag or a button with btn-link class */
+.btn-link {
+    color: #6C757D; /* Grey */
+    text-decoration: none; /* Ensure it looks like a plain link */
+    /* Remove button-like appearance if any */
+    background-color: transparent;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+}
+.btn-link:hover,
+.btn-link:focus {
+    color: #5a6268; /* Darker grey on hover/focus */
+    text-decoration: underline;
+}
+
+/* Style the Visit Form Card/Panel */
+/* Assuming the container has a class or can be targeted */
+.visit-form-card {
+    background-color: #EBF5FB; /* Light blue */
+    padding: 20px;
+    border-radius: 8px;
+    margin-top: 20px; /* Add some margin for better appearance */
+}
