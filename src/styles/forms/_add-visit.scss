@@ -1,0 +1,31 @@
+.add-visit-form-card {
+  background-color: #EBF5FB;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+
+  label {
+    font-weight: 600;
+  }
+
+  .add-visit-submit-button {
+    background-color: #28A745;
+    color: white;
+    border-color: #28A445;
+    &:hover {
+      background-color: darken(#28A745, 10%);
+      border-color: darken(#28A745, 10%);
+    }
+  }
+
+  .add-visit-cancel-link {
+    color: #6C757D;
+    text-decoration: none;
+    background-color: transparent;
+    border: none;
+    padding: 0;
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
