@@ -106,4 +106,18 @@ class VisitControllerTests {
 			.andExpect(view().name("pets/createOrUpdateVisitForm"));
 	}
 
+	@Test
+	void processNewVisitFormWithDescriptionTooLong() throws Exception {
+		String longDescription = "a".repeat(501); // Create a string longer than 500 characters
+		mockMvc
+			.perform(post("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, TEST_PET_ID)
+				.param("name", "George")
+				.param("date", LocalDate.now().plusDays(1).toString())
+				.param("description", longDescription))
+			.andExpect(model().attributeHasFieldErrors("visit", "description"))
+			.andExpect(model().attributeHasFieldErrorCode("visit", "description", "Size"))
+			.andExpect(status().isOk())
+			.andExpect(view().name("pets/createOrUpdateVisitForm"));
+	}
+
 }
