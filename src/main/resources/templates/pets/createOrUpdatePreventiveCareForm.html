@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html xmlns:th="https://www.thymeleaf.org" th:replace="~{fragments/layout :: layout (~{::body},'owners')}">
+
+<body>
+
+  <h2>
+    <th:block th:if="${preventiveCare['new']}">New </th:block>
+    Preventive Care
+  </h2>
+  <form th:object="${preventiveCare}" class="form-horizontal" method="post">
+    <div class="form-group has-feedback">
+      <input
+        th:replace="~{fragments/inputField :: input ('Date', 'careDate', 'date')}" />
+      <input
+        th:replace="~{fragments/inputField :: input ('Type', 'type', 'text')}" />
+      <input
+        th:replace="~{fragments/inputField :: input ('Description', 'description', 'text')}" />
+      <input
+        th:replace="~{fragments/inputField :: input ('Notes', 'notes', 'text')}" />
+    </div>
+    <div class="form-group">
+      <div class="col-sm-offset-2 col-sm-10">
+        <button th:with="text=${preventiveCare['new']} ? 'Add Preventive Care' : 'Update Preventive Care'"
+          class="btn btn-default" type="submit" th:text="${text}">Add Preventive Care</button>
+      </div>
+    </div>
+  </form>
+  <br/>
+  <a th:href="@{/owners/{ownerId}(ownerId=${pet.owner.id})}" class="btn btn-default">Back to Owner</a>
+
+</body>
+</html>

@@ -1,96 +1,128 @@
 <!DOCTYPE html>
-
 <html xmlns:th="https://www.thymeleaf.org" th:replace="~{fragments/layout :: layout (~{::body},'owners')}">
 
 <body>
 
-  <h2 th:text="#{ownerInformation}">Owner Information</h2>
+  <h2>Owner Information</h2>
 
-  <div th:if="${message}" class="alert alert-success" id="success-message">
-    <span th:text="${message}"></span>
-  </div>
-
-  <div th:if="${error}" class="alert alert-danger" id="error-message">
-    <span th:text="${error}"></span>
-  </div>
 
   <table class="table table-striped" th:object="${owner}">
     <tr>
-      <th th:text="#{name}">Name</th>
-      <td><b th:text="*{firstName + ' ' + lastName}"></b></td>
+      <th>Name</th>
+      <td><b th:text="${owner.firstName + ' ' + owner.lastName}"></b></td>
     </tr>
     <tr>
-      <th th:text="#{address}">Address</th>
-      <td th:text="*{address}"></td>
+      <th>Address</th>
+      <td th:text="${owner.address}" />
     </tr>
     <tr>
-      <th th:text="#{city}">City</th>
-      <td th:text="*{city}"></td>
+      <th>City</th>
+      <td th:text="${owner.city}" />
     </tr>
     <tr>
-      <th th:text="#{telephone}">Telephone</th>
-      <td th:text="*{telephone}"></td>
+      <th>Telephone</th>
+      <td th:text="${owner.telephone}" />
     </tr>
   </table>
 
-  <a th:href="@{__${owner.id}__/edit}" class="btn btn-primary" th:text="#{editOwner}">Edit
+  <a th:href="@{/owners/{ownerId}/edit(ownerId=${owner.id})}" class="btn btn-default">Edit
     Owner</a>
-  <a th:href="@{__${owner.id}__/pets/new}" class="btn btn-primary" th:text="#{addNewPet}">Add
-    New Pet</a>
-
+  <a th:href="@{/owners/{ownerId}/pets/new(ownerId=${owner.id})}" class="btn btn-default">Add New
+    Pet</a>
   <br />
   <br />
   <br />
-  <h2 th:text="#{petsAndVisits}">Pets and Visits</h2>
+  <h2>Pets and Visits</h2>
 
   <table class="table table-striped">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Birth Date</th>
+        <th>Type</th>
+        <th>Age</th>
+        <th>Preventive Care</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr th:each="pet : ${owner.pets}">
+        <td th:text="${pet.name}"></td>
+        <td th:text="${#temporals.format(pet.birthDate, 'yyyy/MM/dd')}"></td>
+        <td th:text="${pet.type.name}"></td>
+        <td th:text="${pet.age}"></td>
+        <td>
+          <a th:href="@{/owners/{ownerId}/pets/{petId}/preventivecares/new(ownerId=${owner.id},petId=${pet.id})}" class="btn btn-info">Add Preventive Care</a>
+        </td>
+      </tr>
+    </tbody>
+  </table>
 
+  <br/>
+  <h2>Preventive Care Records</h2>
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <th>Pet Name</th>
+        <th>Date</th>
+        <th>Type</th>
+        <th>Description</th>
+        <th>Notes</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      <th:block th:each="pet : ${owner.pets}">
+        <tr th:each="preventiveCare : ${pet.preventiveCares}">
+          <td th:text="${pet.name}"></td>
+          <td th:text="${#temporals.format(preventiveCare.careDate, 'yyyy/MM/dd')}"></td>
+          <td th:text="${preventiveCare.type}"></td>
+          <td th:text="${preventiveCare.description}"></td>
+          <td th:text="${preventiveCare.notes}"></td>
+          <td>
+            <a th:href="@{/owners/{ownerId}/pets/{petId}/preventivecares/{preventiveCareId}/edit(ownerId=${owner.id},petId=${pet.id},preventiveCareId=${preventiveCare.id})}" class="btn btn-primary">Edit</a>
+            <a th:href="@{/owners/{ownerId}/pets/{petId}/preventivecares/{preventiveCareId}/delete(ownerId=${owner.id},petId=${pet.id},preventiveCareId=${preventiveCare.id})}" class="btn btn-danger">Delete</a>
+          </td>
+        </tr>
+      </th:block>
+      <tr th:if="${owner.pets.isEmpty() or owner.pets.![preventiveCares.isEmpty()].contains(false) == false}">
+        <td colspan="6">No preventive care records found for this owner's pets.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <table class="table table-striped">
     <tr th:each="pet : ${owner.pets}">
       <td valign="top">
         <dl class="dl-horizontal">
-          <dt th:text="#{name}">Name</dt>
-          <dd th:text="${pet.name}"></dd>
-          <dt th:text="#{birthDate}">Birth Date</dt>
-          <dd th:text="${#temporals.format(pet.birthDate, 'yyyy-MM-dd')}"></dd>
-          <dt th:text="#{type}">Type</dt>
-          <dd th:text="${pet.type}"></dd>
+          <dt>Name</dt>
+          <dd th:text="${pet.name}" />
+          <dt>Birth Date</dt>
+          <dd th:text="${#temporals.format(pet.birthDate, 'yyyy/MM/dd')}" />
+          <dt>Type</dt>
+          <dd th:text="${pet.type.name}" />
         </dl>
       </td>
       <td valign="top">
         <table class="table-condensed">
           <thead>
             <tr>
-              <th th:text="#{visitDate}">Visit Date</th>
-              <th th:text="#{description}">Description</th>
+              <th>Visit Date</th>
+              <th>Description</th>
             </tr>
           </thead>
           <tr th:each="visit : ${pet.visits}">
-            <td th:text="${#temporals.format(visit.date, 'yyyy-MM-dd')}"></td>
-            <td th:text="${visit?.description}"></td>
+            <td th:text="${#temporals.format(visit.visitDate, 'yyyy/MM/dd')}"></td>
+            <td th:text="${visit.description}"></td>
           </tr>
           <tr>
-            <td><a th:href="@{__${owner.id}__/pets/__${pet.id}__/edit}" th:text="#{editPet}">Edit Pet</a></td>
-            <td><a th:href="@{__${owner.id}__/pets/__${pet.id}__/visits/new}" th:text="#{addVisit}">Add Visit</a></td>
+            <td><a
+                th:href="@{/owners/{ownerId}/pets/{petId}/visits/new(ownerId=${owner.id},petId=${pet.id})}">Add
+                Visit</a></td>
           </tr>
         </table>
       </td>
     </tr>
-
   </table>
-  <script>
-    // Function to hide the success and error messages after 3 seconds
-    function hideMessages() {
-      setTimeout(function () {
-        document.getElementById("success-message").style.display = "none";
-        document.getElementById("error-message").style.display = "none";
-      }, 3000); // 3000 milliseconds (3 seconds)
-    }
-
-    // Call the function to hide messages
-    hideMessages();
-  </script>
-
 </body>
-
 
 </html>
