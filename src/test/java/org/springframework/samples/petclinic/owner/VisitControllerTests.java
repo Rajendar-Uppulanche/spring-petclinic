@@ -16,9 +16,11 @@
 
 package org.springframework.samples.petclinic.owner;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
@@ -70,6 +72,26 @@ class VisitControllerTests {
 		mockMvc.perform(get("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, TEST_PET_ID))
 			.andExpect(status().isOk())
 			.andExpect(view().name("pets/createOrUpdateVisitForm"));
+	}
+
+	@Test
+	void initNewVisitFormUiElements() throws Exception {
+		mockMvc.perform(get("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, TEST_PET_ID))
+			.andExpect(status().isOk())
+			.andExpect(view().name("pets/createOrUpdateVisitForm"))
+			// Check for form panel background style
+			.andExpect(content().string(containsString("style=\"background-color: #EBF5FB; padding: 20px; border-radius: 5px;\"")))
+			// Check for label bolding style block
+			.andExpect(content().string(containsString("<style>")))
+			.andExpect(content().string(containsString(".form-horizontal label {\n        font-weight: 600;\n      }")))
+			.andExpect(content().string(containsString("</style>")))
+			// Check for updated labels
+			.andExpect(content().string(containsString("Appointment Date")))
+			.andExpect(content().string(containsString("Reason for Visit")))
+			// Check for Add Visit button with custom class and rendered text
+			.andExpect(content().string(containsString("<button class=\"btn btn-success-custom\" type=\"submit\">Add Visit</button>")))
+			// Check for Cancel link with style and rendered text
+			.andExpect(content().string(containsString("<a href=\"/owners/1\" style=\"color: #6C757D; text-decoration: none; margin-left: 10px;\">Cancel</a>")));
 	}
 
 	@Test
