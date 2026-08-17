@@ -16,6 +16,8 @@
 package org.springframework.samples.petclinic.owner;
 
 import java.time.LocalDate;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -27,6 +29,8 @@ import org.springframework.web.bind.annotation.InitBinder;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 
 import jakarta.validation.Valid;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
@@ -109,6 +113,35 @@ class VisitController {
 		this.owners.save(owner);
 		redirectAttributes.addFlashAttribute("message", "Your visit has been booked");
 		return "redirect:/owners/{ownerId}";
+	}
+
+	/**
+	 * API endpoint for retrieving filtered visits for a specific pet.
+	 * This method serves as a placeholder for the filtering functionality.
+	 * @param ownerId The ID of the owner.
+	 * @param petId The ID of the pet.
+	 * @param startDate Optional start date for filtering visits.
+	 * @param endDate Optional end date for filtering visits.
+	 * @param vetId Optional veterinarian ID for filtering visits.
+	 * @param status Optional status for filtering visits.
+	 * @return A list of visits matching the criteria (currently an empty list as a placeholder).
+	 */
+	@GetMapping("/owners/{ownerId}/pets/{petId}/visits")
+	public @ResponseBody List<Visit> getFilteredVisits(
+			@PathVariable("ownerId") int ownerId,
+			@PathVariable("petId") int petId,
+			@RequestParam(required = false) LocalDate startDate,
+			@RequestParam(required = false) LocalDate endDate,
+			@RequestParam(required = false) Integer vetId,
+			@RequestParam(required = false) String status
+	) {
+		// In a full implementation, this would call a service layer to fetch and filter visits.
+		// For now, it returns an empty list as the Visit model and repository are not provided.
+		// The plan requires creating API endpoints for filtered appointments.
+		// This serves as a placeholder for that functionality.
+		System.out.println("Received request for filtered visits for owner " + ownerId + ", pet " + petId);
+		System.out.println("Filters: startDate=" + startDate + ", endDate=" + endDate + ", vetId=" + vetId + ", status=" + status);
+		return Collections.emptyList();
 	}
 
 }
