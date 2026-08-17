@@ -1,0 +1,28 @@
+<div *ngIf="ownerDetails">
+  <h2>Owner Details</h2>
+  <div>
+    <strong>Name:</strong> {{ ownerDetails.firstName }} {{ ownerDetails.lastName }}
+  </div>
+  <div>
+    <strong>Address:</strong> {{ ownerDetails.address }}
+  </div>
+  <div>
+    <strong>City:</strong> {{ ownerDetails.city }}
+  </div>
+  <div>
+    <strong>Telephone:</strong> {{ ownerDetails.telephone }}
+  </div>
+
+  <h3>Pets</h3>
+  <div *ngIf="ownerDetails.pets && ownerDetails.pets.length > 0; else noPets">
+    <div *ngFor="let pet of ownerDetails.pets" class="pet-card">
+      <h4>{{ pet.name }} <app-pet-visit-badge [visitCount]="pet.visitCount"></app-pet-visit-badge></h4>
+      <p><strong>Type:</strong> {{ pet.typeName }}</p>
+      <p><strong>Birth Date:</strong> {{ pet.birthDate }}</p>
+      <!-- Other pet details -->
+    </div>
+  </div>
+  <ng-template #noPets>
+    <p>No pets registered for this owner.</p>
+  </ng-template>
+</div>
