@@ -22,7 +22,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 /**
- * Repository class for <code>Owner</code> domain objects. All method names are compliant
+ * Repository class for `Owner` domain objects. All method names are compliant
  * with Spring Data naming conventions so this interface can easily be extended for Spring
  * Data. See:
  * https://docs.spring.io/spring-data/jpa/docs/current/reference/html/#repositories.query-methods.query-creation
@@ -37,12 +37,20 @@ public interface OwnerRepository extends JpaRepository<Owner, Integer> {
 
 	/**
 	 * Retrieve {@link Owner}s from the data store by last name, returning all owners
-	 * whose last name <i>starts</i> with the given name.
+	 * whose last name *starts* with the given name.
 	 * @param lastName Value to search for
 	 * @return a Collection of matching {@link Owner}s (or an empty Collection if none
 	 * found)
-	 */
-	Page<Owner> findByLastNameStartingWith(String lastName, Pageable pageable);
+	 */	Page<Owner> findByLastNameStartingWith(String lastName, Pageable pageable);
+
+	/**
+	 * Retrieve {@link Owner}s from the data store by last name, returning all owners
+	 * whose last name *contains* the given name, case-insensitively, and ordered
+	 * alphabetically by last name.
+	 * @param lastName Value to search for (partial match, case-insensitive)
+	 * @param pageable Pagination information
+	 * @return a Page of matching {@link Owner}s (or an empty Page if none found)
+	 */	Page<Owner> findByLastNameContainingIgnoreCaseOrderByLastNameAsc(String lastName, Pageable pageable);
 
 	/**
 	 * Retrieve an {@link Owner} from the data store by id.
@@ -56,7 +64,6 @@ public interface OwnerRepository extends JpaRepository<Owner, Integer> {
 	 * {@link Optional} if not found.
 	 * @throws IllegalArgumentException if the id is null (assuming null is not a valid
 	 * input for id)
-	 */
-	Optional<Owner> findById(Integer id);
+	 */	Optional<Owner> findById(Integer id);
 
 }
