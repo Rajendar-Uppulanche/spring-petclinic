@@ -76,8 +76,7 @@ class OwnerControllerTests {
 		george.setFirstName("George");
 		george.setLastName("Franklin");
 		george.setAddress("110 W. Liberty St.");
-		george.setCity("Madison");
-		george.setTelephone("6085551023");
+		george.setCity("Madison");		george.setTelephone("6085551023");
 		Pet max = new Pet();
 		PetType dog = new PetType();
 		dog.setName("dog");
@@ -89,12 +88,48 @@ class OwnerControllerTests {
 		return george;
 	}
 
+	private Owner edgar() {
+		Owner edgar = new Owner();
+		edgar.setId(2);
+		edgar.setFirstName("Edgar");
+		edgar.setLastName("Jackson");
+		edgar.setAddress("123 Main St.");
+		edgar.setCity("Madison");
+		edgar.setTelephone("6085551234");
+		return edgar;
+	}
+
+	private Owner samuel() {
+		Owner samuel = new Owner();
+		samuel.setId(3);
+		samuel.setFirstName("Samuel");
+		samuel.setLastName("Johnson");
+		samuel.setAddress("456 Oak Ave.");
+		samuel.setCity("Madison");
+		samuel.setTelephone("6085555678");
+		return samuel;
+	}
+
+
 	@BeforeEach
 	void setup() {
 
 		Owner george = george();
-		given(this.owners.findByLastNameStartingWith(eq("Franklin"), any(Pageable.class)))
+		Owner edgar = edgar();
+		Owner samuel = samuel();
+
+		// Mock the new search method
+		given(this.owners.findByLastNameContainingIgnoreCaseOrderByLastNameAsc(eq("franklin"), any(Pageable.class)))
 			.willReturn(new PageImpl<>(List.of(george)));
+		given(this.owners.findByLastNameContainingIgnoreCaseOrderByLastNameAsc(eq("FRANKLIN"), any(Pageable.class)))
+			.willReturn(new PageImpl<>(List.of(george)));
+		given(this.owners.findByLastNameContainingIgnoreCaseOrderByLastNameAsc(eq("son"), any(Pageable.class)))
+			.willReturn(new PageImpl<>(List.of(george, samuel))); // Franklin, Johnson (ordered by last name)
+		given(this.owners.findByLastNameContainingIgnoreCaseOrderByLastNameAsc(eq(""), any(Pageable.class)))
+			.willReturn(new PageImpl<>(List.of(george, edgar, samuel))); // All owners
+		given(this.owners.findByLastNameContainingIgnoreCaseOrderByLastNameAsc(eq("nonexistent"), any(Pageable.class)))
+			.willReturn(new PageImpl<>(List.of()));
+
 
 		given(this.owners.findById(TEST_OWNER_ID)).willReturn(Optional.of(george));
 		Visit visit = new Visit();
@@ -143,24 +178,43 @@ class OwnerControllerTests {
 
 	@Test
 	void processFindFormSuccess() throws Exception {
-		Page<Owner> tasks = new PageImpl<>(List.of(george(), new Owner()));
-		when(this.owners.findByLastNameStartingWith(anyString(), any(Pageable.class))).thenReturn(tasks);
+		// This test now implicitly uses the new search method
+		Page<Owner> tasks = new PageImpl<>(List.of(george(), edgar(), samuel())); // All owners
+		when(this.owners.findByLastNameContainingIgnoreCaseOrderByLastNameAsc(anyString(), any(Pageable.class))).thenReturn(tasks);
 		mockMvc.perform(get("/owners?page=1")).andExpect(status().isOk()).andExpect(view().name("owners/ownersList"));
 	}
 
 	@Test
-	void processFindFormByLastName() throws Exception {
+	void processFindFormByLastNamePartialAndCaseInsensitive() throws Exception {
+		// Test partial match and case-insensitivity
 		Page<Owner> tasks = new PageImpl<>(List.of(george()));
-		when(this.owners.findByLastNameStartingWith(eq("Franklin"), any(Pageable.class))).thenReturn(tasks);
-		mockMvc.perform(get("/owners?page=1").param("lastName", "Franklin"))
+		when(this.owners.findByLastNameContainingIgnoreCaseOrderByLastNameAsc(eq("frank"), any(Pageable.class))).thenReturn(tasks);
+		mockMvc.perform(get("/owners?page=1").param("lastName", "frank"))
 			.andExpect(status().is3xxRedirection())
 			.andExpect(view().name("redirect:/owners/" + TEST_OWNER_ID));
+
+		tasks = new PageImpl<>(List.of(george()));
+		when(this.owners.findByLastNameContainingIgnoreCaseOrderByLastNameAsc(eq("FRANK"), any(Pageable.class))).thenReturn(tasks);
+		mockMvc.perform(get("/owners?page=1").param("lastName", "FRANK"))
+			.andExpect(status().is3xxRedirection())
+			.andExpect(view().name("redirect:/owners/" + TEST_OWNER_ID));
+
+		// Test multiple results with partial match and ordering
+		tasks = new PageImpl<>(List.of(george(), samuel())); // Franklin, Johnson
+		when(this.owners.findByLastNameContainingIgnoreCaseOrderByLastNameAsc(eq("son"), any(Pageable.class))).thenReturn(tasks);
+		mockMvc.perform(get("/owners?page=1").param("lastName", "son"))
+			.andExpect(status().isOk())
+			.andExpect(model().attribute("listOwners", hasSize(2)))
+			.andExpect(model().attribute("listOwners", hasItem(hasProperty("lastName", is("Franklin")))))
+			.andExpect(model().attribute("listOwners", hasItem(hasProperty("lastName", is("Johnson")))))
+			.andExpect(view().name("owners/ownersList"));
 	}
+
 
 	@Test
 	void processFindFormIgnoresSurroundingWhitespace() throws Exception {
 		Page<Owner> tasks = new PageImpl<>(List.of(george()));
-		when(this.owners.findByLastNameStartingWith(eq("Franklin"), any(Pageable.class))).thenReturn(tasks);
+		when(this.owners.findByLastNameContainingIgnoreCaseOrderByLastNameAsc(eq("Franklin"), any(Pageable.class))).thenReturn(tasks);
 
 		for (String lastName : List.of(" Franklin", "Franklin ", " Franklin ")) {
 			mockMvc.perform(get("/owners?page=1").param("lastName", lastName))
@@ -168,25 +222,27 @@ class OwnerControllerTests {
 				.andExpect(view().name("redirect:/owners/" + TEST_OWNER_ID));
 		}
 
-		verify(this.owners, times(3)).findByLastNameStartingWith(eq("Franklin"), any(Pageable.class));
+		// Verify that the new method was called with the stripped string
+		verify(this.owners, times(3)).findByLastNameContainingIgnoreCaseOrderByLastNameAsc(eq("Franklin"), any(Pageable.class));
 	}
 
 	@Test
 	void processFindFormWithWhitespaceOnlyLastNameReturnsAllOwners() throws Exception {
-		Page<Owner> tasks = new PageImpl<>(List.of(george(), new Owner()));
-		when(this.owners.findByLastNameStartingWith(eq(""), any(Pageable.class))).thenReturn(tasks);
+		Page<Owner> tasks = new PageImpl<>(List.of(george(), edgar(), samuel())); // All owners
+		when(this.owners.findByLastNameContainingIgnoreCaseOrderByLastNameAsc(eq(""), any(Pageable.class))).thenReturn(tasks);
 
 		mockMvc.perform(get("/owners?page=1").param("lastName", "   "))
 			.andExpect(status().isOk())
 			.andExpect(view().name("owners/ownersList"));
 
-		verify(this.owners).findByLastNameStartingWith(eq(""), any(Pageable.class));
+		// Verify that the new method was called with an empty string
+		verify(this.owners).findByLastNameContainingIgnoreCaseOrderByLastNameAsc(eq(""), any(Pageable.class));
 	}
 
 	@Test
 	void processFindFormNoOwnersFound() throws Exception {
 		Page<Owner> tasks = new PageImpl<>(List.of());
-		when(this.owners.findByLastNameStartingWith(eq("Unknown Surname"), any(Pageable.class))).thenReturn(tasks);
+		when(this.owners.findByLastNameContainingIgnoreCaseOrderByLastNameAsc(eq("Unknown Surname"), any(Pageable.class))).thenReturn(tasks);
 		mockMvc.perform(get("/owners?page=1").param("lastName", "Unknown Surname"))
 			.andExpect(status().isOk())
 			.andExpect(model().attributeHasFieldErrors("owner", "lastName"))
