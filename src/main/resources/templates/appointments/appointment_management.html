@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html xmlns:th="https://www.thymeleaf.org" th:replace="~{fragments/layout :: layout (~{::body},'appointments')}">
+
+<body>
+
+<h2>Appointment Management</h2>
+
+<form th:action="@{/appointments/search}" method="get" class="form-horizontal" id="search-appointment-form">
+    <div class="form-group">
+        <div class="control-group" id="date-group">
+            <label class="col-sm-2 control-label">Date </label>
+            <div class="col-sm-10">
+                <input th:field="${selectedDate}" type="date" class="form-control" name="date"/>
+            </div>
+        </div>
+        <div class="control-group" id="pet-name-group">
+            <label class="col-sm-2 control-label">Pet Name </label>
+            <div class="col-sm-10">
+                <input th:field="${selectedPetName}" type="text" class="form-control" name="petName"/>
+            </div>
+        </div>
+        <div class="control-group" id="owner-last-name-group">
+            <label class="col-sm-2 control-label">Owner Last Name </label>
+            <div class="col-sm-10">
+                <input th:field="${selectedOwnerLastName}" type="text" class="form-control" name="ownerLastName"/>
+            </div>
+        </div>
+        <div class="control-group" id="vet-last-name-group">
+            <label class="col-sm-2 control-label">Vet Last Name </label>
+            <div class="col-sm-10">
+                <input th:field="${selectedVetLastName}" type="text" class="form-control" name="vetLastName"/>
+            </div>
+        </div>
+        <div class="control-group" id="status-group">
+            <label class="col-sm-2 control-label">Status </label>
+            <div class="col-sm-10">
+                <select th:field="${selectedStatus}" class="form-control" name="status">
+                    <option value="">-- Select Status --</option>
+                    <option th:each="status : ${appointmentStatuses}" th:value="${status}" th:text="${status}"></option>
+                </select>
+            </div>
+        </div>
+    </div>
+    <div class="form-group">
+        <div class="col-sm-offset-2 col-sm-10">
+            <button type="submit" class="btn btn-default">Find Appointments</button>
+        </div>
+    </div>
+</form>
+
+<br/>
+
+<table id="appointmentsTable" class="table table-striped">
+    <thead>
+    <tr>
+        <th>Date</th>
+        <th>Description</th>
+        <th>Pet</th>
+        <th>Owner</th>
+        <th>Vet</th>
+        <th>Status</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:each="appointment : ${appointments}">
+        <td th:text="${#temporals.format(appointment.date, 'yyyy/MM/dd')}"></td>
+        <td th:text="${appointment.description}"></td>
+        <td th:text="${appointment.pet.name}"></td>
+        <td th:text="${appointment.pet.owner.firstName} + ' ' + ${appointment.pet.owner.lastName}"></td>
+        <td th:text="${appointment.vet != null ? appointment.vet.firstName + ' ' + appointment.vet.lastName : 'N/A'}"></td>
+        <td th:text="${appointment.status}"></td>
+    </tr>
+    </tbody>
+</table>
+
+</body>
+</html>
