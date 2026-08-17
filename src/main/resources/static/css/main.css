@@ -1,0 +1,116 @@
+/* General styles for the PetClinic application */
+body {
+    font-family: 'Open Sans', sans-serif;
+    background-color: #f8f9fa;
+    color: #333;
+}
+
+.container {
+    margin-top: 20px;
+}
+
+/* Navigation bar styles */
+.navbar {
+    background-color: #28a745; /* PetClinic green */
+    border-color: #218838;
+}
+
+.navbar-brand, .navbar-nav .nav-link {
+    color: #fff !important;
+}
+
+.navbar-nav .nav-link:hover {
+    color: #e9ecef !important;
+}
+
+/* Button styles (FR-027) */
+.btn-default {
+    color: #fff;
+    background-color: #6c757d; /* Changed from default grey */
+    border-color: #6c757d;
+}
+
+.btn-default:hover {
+    color: #fff;
+    background-color: #5a6268;
+    border-color: #545b62;
+}
+
+.btn-primary {
+    color: #fff;
+    background-color: #007bff; /* Changed from default blue to a new blue */
+    border-color: #007bff;
+}
+
+.btn-primary:hover {
+    color: #fff;
+    background-color: #0056b3;
+    border-color: #004085;
+}
+
+.btn-success {
+    color: #fff;
+    background-color: #28a745;
+    border-color: #28a745;
+}
+
+.btn-success:hover {
+    color: #fff;
+    background-color: #218838;
+    border-color: #1e7e34;
+}
+
+/* Form styles for filtering (FR-026) */
+#filter-appointment-form .form-group {
+    margin-bottom: 15px;
+}
+
+#filter-appointment-form .control-label {
+    text-align: right;
+    padding-top: 7px;
+    margin-bottom: 0;
+}
+
+#filter-appointment-form .form-control {
+    width: 100%;
+    padding: 6px 12px;
+    font-size: 14px;
+    line-height: 1.42857143;
+    color: #555;
+    background-color: #fff;
+    background-image: none;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-shadow: inset 0 1px 1px rgba(0, 0, 0, .075);
+    transition: border-color ease-in-out .15s, box-shadow ease-in-out .15s;
+}
+
+#filter-appointment-form .form-control:focus {
+    border-color: #66afe9;
+    outline: 0;
+    box-shadow: inset 0 1px 1px rgba(0, 0, 0, .075), 0 0 8px rgba(102, 175, 233, .6);
+}
+
+/* Table styles */
+.table {
+    width: 100%;
+    max-width: 100%;
+    margin-bottom: 20px;
+    background-color: transparent;
+}
+
+.table-striped tbody > tr:nth-of-type(odd) {
+    background-color: #f9f9f9;
+}
+
+.table > thead > tr > th {
+    vertical-align: bottom;
+    border-bottom: 2px solid #dee2e6;
+    padding: .75rem;
+}
+
+.table > tbody > tr > td {
+    padding: .75rem;
+    vertical-align: top;
+    border-top: 1px solid #dee2e6;
+}

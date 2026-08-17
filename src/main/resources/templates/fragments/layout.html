@@ -1,88 +1,34 @@
 <!DOCTYPE html>
-
-<html th:fragment="layout (template, menu)" xmlns:th="https://www.thymeleaf.org">
-
+<html xmlns:th="https://www.thymeleaf.org">
 <head>
+    <meta charset="utf-8"/>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>PetClinic :: a Spring Framework demonstration</title>
 
-  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-  <meta charset="utf-8">
-  <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="shortcut icon" type="image/x-icon" th:href="@{/resources/images/favicon.png}">
-  <title th:text="#{layoutTitle}">PetClinic :: a Spring Framework demonstration</title>
-  <link th:href="@{/webjars/font-awesome/css/font-awesome.min.css}" rel="stylesheet">
-  <link rel="stylesheet" th:href="@{/resources/css/petclinic.css}" />
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
+          integrity="sha384-JcKb8q3iqJ61gNV9KGb8thSsNjpSL0n8PARn9HuZOnIxN0hoP+VmmDGMN5t9UJ0Z" crossorigin="anonymous">
+    <link rel="stylesheet" th:href="@{/resources/css/main.css}"/>
 
 </head>
-
 <body>
-
-  <nav class="navbar navbar-expand-lg navbar-dark" role="navigation">
+<div class="container">
+    <div th:insert="~{fragments/bodyHeader :: bodyHeader}"></div>
     <div class="container-fluid">
-      <a class="navbar-brand" th:href="@{/}"><span></span></a>
-      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#main-navbar">
-        <span class="navbar-toggler-icon"></span>
-      </button>
-      <div class="collapse navbar-collapse" id="main-navbar" style>
-
-        <ul class="navbar-nav me-auto mb-2 mb-lg-0" th:remove="all">
-
-          <li th:fragment="menuItem (link,active,title,glyph,text)" th:class="nav-item">
-            <a th:class="${active==menu ? 'nav-link active' : 'nav-link'}" th:href="@{__${link}__}" th:title="${title}">
-              <span th:class="'fa fa-'+${glyph}" class="fa fa-home"></span>
-              <span th:text="${text}">Template</span>
-            </a>
-          </li>
-
-        </ul>
-
-        <ul class="nav navbar-nav me-auto">
-
-          <li th:replace="~{::menuItem ('/','home','home page','home',#{home})}">
-            <span class="fa fa-home" aria-hidden="true"></span>
-            <span th:text="#{home}">Home</span>
-          </li>
-
-          <li th:replace="~{::menuItem ('/owners/find','owners','find owners','search',#{findOwners})}">
-            <span class="fa fa-search" aria-hidden="true"></span>
-            <span th:text="#{findOwners}">Find owners</span>
-          </li>
-
-          <li th:replace="~{::menuItem ('/vets.html','vets','veterinarians','th-list',#{vets})}">
-            <span class="fa fa-th-list" aria-hidden="true"></span>
-            <span th:text="#{vets}">Veterinarians</span>
-          </li>
-
-          <li
-            th:replace="~{::menuItem ('/oups','error','trigger a RuntimeException to see how it is handled','exclamation-triangle',#{error})}">
-            <span class="fa exclamation-triangle" aria-hidden="true"></span>
-            <span th:text="#{error}">Error</span>
-          </li>
-
-        </ul>
-      </div>
-    </div>
-  </nav>
-  <div class="container-fluid">
-    <div class="container xd-container">
-
-      <th:block th:insert="${template}" />
-
-      <br />
-      <br />
-      <div class="container">
-        <div class="row">
-          <div class="col-12 text-center">
-            <img src="../static/images/spring-logo.svg" th:src="@{/resources/images/spring-logo.svg}"
-              alt="VMware Tanzu Logo" class="logo">
-          </div>
+        <div class="container xd-container">
+            <th:block th:replace="${body}"/>
         </div>
-      </div>
     </div>
-  </div>
-
-  <script th:src="@{/webjars/bootstrap/dist/js/bootstrap.bundle.min.js}"></script>
-
+    <div th:insert="~{fragments/footer :: footer}"></div>
+</div>
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"
+        integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj"
+        crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"
+        integrity="sha384-9/reFTGAW83EW2RDu2S0VKaIzap3H66lZH81PoYlFhbGU+6BZp6G7niu735Sk7lN"
+        crossorigin="anonymous"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"
+        integrity="sha384-B4gt1jrGC7Jh4AgTPSdUtOBvfO8shuf57BaghqFfPlYxofvL8/KUEfYiJOMMV+rV"
+        crossorigin="anonymous"></script>
 </body>
-
 </html>
