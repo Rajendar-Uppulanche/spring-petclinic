@@ -1,0 +1,27 @@
+.pet-visit-badge {
+  display: inline-block;
+  padding: 0.2em 0.6em;
+  border-radius: 0.25rem;
+  font-size: 0.75em;
+  font-weight: bold;
+  line-height: 1;
+  text-align: center;
+  white-space: nowrap;
+  vertical-align: baseline;
+  margin-left: 0.5em; /* Spacing from other elements */
+}
+
+.no-visits {
+  color: #6c757d; /* Gray */
+  background-color: #e2e6ea;
+}
+
+.one-visit {
+  color: #007bff; /* Blue */
+  background-color: #cce5ff;
+}
+
+.multiple-visits {
+  color: #28a745; /* Green */
+  background-color: #d4edda;
+}
