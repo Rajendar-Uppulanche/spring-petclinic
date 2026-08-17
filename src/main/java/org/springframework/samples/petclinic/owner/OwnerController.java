@@ -104,6 +104,7 @@ class OwnerController {
 		}
 
 		// find owners by last name
+		// Changed to use the new method for case-insensitive partial match and ordering
 		Page<Owner> ownersResults = findPaginatedForOwnersLastName(page, lastName);
 		if (ownersResults.isEmpty()) {
 			// no owners found
@@ -133,7 +134,8 @@ class OwnerController {
 	private Page<Owner> findPaginatedForOwnersLastName(int page, String lastname) {
 		int pageSize = 5;
 		Pageable pageable = PageRequest.of(page - 1, pageSize);
-		return owners.findByLastNameStartingWith(lastname, pageable);
+		// Updated to use the new search method
+		return owners.findByLastNameContainingIgnoreCaseOrderByLastNameAsc(lastname, pageable);
 	}
 
 	@GetMapping("/owners/{ownerId}/edit")
