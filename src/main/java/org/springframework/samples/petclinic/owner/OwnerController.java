@@ -52,8 +52,11 @@ class OwnerController {
 
 	private final OwnerRepository owners;
 
-	public OwnerController(OwnerRepository owners) {
+	private final OwnerService ownerService; // New field for OwnerService
+
+	public OwnerController(OwnerRepository owners, OwnerService ownerService) { // Modified constructor
 		this.owners = owners;
+		this.ownerService = ownerService; // Initialize new field
 	}
 
 	@InitBinder
@@ -169,10 +172,9 @@ class OwnerController {
 	@GetMapping("/owners/{ownerId}")
 	public ModelAndView showOwner(@PathVariable("ownerId") int ownerId) {
 		ModelAndView mav = new ModelAndView("owners/ownerDetails");
-		Optional<Owner> optionalOwner = this.owners.findById(ownerId);
-		Owner owner = optionalOwner.orElseThrow(() -> new IllegalArgumentException(
-				"Owner not found with id: " + ownerId + ". Please ensure the ID is correct "));
-		mav.addObject(owner);
+		// Use the new OwnerService to get owner details with formatted pet visit counts
+		OwnerDetailsDTO ownerDetails = this.ownerService.findOwnerDetailsWithPetVisitCounts(ownerId);
+		mav.addObject("owner", ownerDetails);
 		return mav;
 	}
 
