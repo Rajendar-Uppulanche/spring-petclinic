@@ -16,22 +16,29 @@
 package org.springframework.samples.petclinic.owner;
 
 import java.time.LocalDate;
-import java.util.Collection;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
 
+import org.springframework.beans.support.MutableSortDefinition;
+import org.springframework.beans.support.PropertyComparator;
 import org.springframework.format.annotation.DateTimeFormat;
-import org.springframework.samples.petclinic.model.NamedEntity;
+import org.springframework.samples.petclinic.model.BaseEntity;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
-import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
+import jakarta.persistence.Temporal;
+import jakarta.persistence.TemporalType;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.PastOrPresent;
+import jakarta.validation.constraints.Size;
 
 /**
  * Simple business object representing a pet.
@@ -39,31 +46,45 @@ import jakarta.persistence.Table;
  * @author Ken Krebs
  * @author Juergen Hoeller
  * @author Sam Brannen
+ * @author Maciej Walkowiak
  * @author Wick Dynex
  */
 @Entity
 @Table(name = "pets")
-public class Pet extends NamedEntity {
+public class Pet extends BaseEntity {
 
-	@Column
+	@Column(name = "name")
+	@NotNull
+	@Size(min = 1, max = 255)
+	private String name;
+
+	@Column(name = "birth_date")
+	@Temporal(TemporalType.DATE)
 	@DateTimeFormat(pattern = "yyyy-MM-dd")
+	@PastOrPresent
 	private LocalDate birthDate;
 
 	@ManyToOne
 	@JoinColumn(name = "type_id")
 	private PetType type;
 
-	@OneToMany(cascade = CascadeType.ALL, fetch = FetchType.EAGER)
-	@JoinColumn(name = "pet_id")
-	@OrderBy("date ASC")
-	private final Set<Visit> visits = new LinkedHashSet<>();
+	@OneToMany(cascade = CascadeType.ALL, mappedBy = "pet")
+	private Set<Visit> visits;
 
-	public void setBirthDate(LocalDate birthDate) {
-		this.birthDate = birthDate;
+	public String getName() {
+		return this.name;
+	}
+
+	public void setName(String name) {
+		this.name = name;
 	}
 
 	public LocalDate getBirthDate() {
 		return this.birthDate;
+	}
+
+	public void setBirthDate(LocalDate birthDate) {
+		this.birthDate = birthDate;
 	}
 
 	public PetType getType() {
@@ -74,12 +95,34 @@ public class Pet extends NamedEntity {
 		this.type = type;
 	}
 
-	public Collection<Visit> getVisits() {
+	protected Set<Visit> getVisitsInternal() {
+		if (this.visits == null) {
+			this.visits = new LinkedHashSet<>();
+		}
 		return this.visits;
 	}
 
+	protected void setVisitsInternal(Set<Visit> visits) {
+		this.visits = visits;
+	}
+
+	public List<Visit> getVisits() {
+		List<Visit> sortedVisits = new ArrayList<>(getVisitsInternal());
+		PropertyComparator.sort(sortedVisits, new MutableSortDefinition("date", false, false));
+		return Collections.unmodifiableList(sortedVisits);
+	}
+
 	public void addVisit(Visit visit) {
-		getVisits().add(visit);
+		getVisitsInternal().add(visit);
+		visit.setPet(this);
+	}
+
+	/**
+	 * Returns the number of visits for this Pet.
+	 * @return the number of visits
+	 */
+	public int getVisitsCount() {
+		return getVisitsInternal().size();
 	}
 
 }
