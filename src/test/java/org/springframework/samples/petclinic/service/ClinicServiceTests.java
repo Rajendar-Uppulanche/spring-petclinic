@@ -41,6 +41,11 @@ import org.springframework.samples.petclinic.vet.Vet;
 import org.springframework.samples.petclinic.vet.VetRepository;
 import org.springframework.transaction.annotation.Transactional;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+import org.hibernate.SessionFactory;
+import org.hibernate.stat.Statistics;
+
 /**
  * Integration test of the Service and the Repository layer.
  * <p>
@@ -83,6 +88,9 @@ class ClinicServiceTests {
 
 	@Autowired
 	protected VetRepository vets;
+
+	@PersistenceContext
+	private EntityManager entityManager;
 
 	private final Pageable pageable = Pageable.unpaged();
 
@@ -310,6 +318,34 @@ class ClinicServiceTests {
 		// Verify both exist
 		assertThat(owner1.getPet("SamePetName")).isNotNull();
 		assertThat(owner2.getPet("samepetname")).isNotNull();
+	}
+
+	@Test
+	@Transactional
+	void shouldFindSingleOwnerWithPetsAndVisitsEagerly() {
+		// Enable Hibernate statistics
+		SessionFactory sessionFactory = entityManager.getEntityManagerFactory().unwrap(SessionFactory.class);
+		Statistics statistics = sessionFactory.getStatistics();
+		statistics.clear();
+		statistics.setStatisticsEnabled(true);
+
+		// Fetch owner 1 (Franklin) who has one pet (Max) and Max has one visit
+		Optional<Owner> optionalOwner = this.owners.findById(1);
+		assertThat(optionalOwner).isPresent();
+		Owner owner = optionalOwner.get();
+
+		// Access pets and visits to trigger lazy loading if not eager
+		assertThat(owner.getPets()).hasSize(1);
+		Pet pet = owner.getPets().get(0);
+		assertThat(pet.getVisits()).hasSize(1);
+
+		// Assert that only a limited number of queries were executed
+		// Expected: 1 query for owner + pets + visits
+		// Depending on Hibernate version and configuration, it might be 1 or 2 queries.
+		// A single query for owner + pets + visits is ideal. More than 2 would indicate N+1.
+		assertThat(statistics.getQueryExecutionCount()).isLessThanOrEqualTo(2);
+
+		statistics.setStatisticsEnabled(false);
 	}
 
 }
