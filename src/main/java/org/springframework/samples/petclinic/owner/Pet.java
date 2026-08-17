@@ -74,6 +74,12 @@ public class Pet extends NamedEntity {
 		this.type = type;
 	}
 
+	@Override
+	public String getName() {
+		String name = super.getName();
+		return name != null ? name : "";
+	}
+
 	public Collection<Visit> getVisits() {
 		return this.visits;
 	}
