@@ -1,0 +1,12 @@
+// Core variables for the application
+$primary-color: #007bff; // Original primary color
+$secondary-color: #6c757d;
+
+// New button color for SP-48 (Green)
+$sp48-primary-bg: #28a745;
+$sp48-primary-border: #28a745;
+
+// Button specific variables
+$btn-primary-bg: $sp48-primary-bg; // Updated to new SP-48 color
+$btn-primary-color: #ffffff;
+$btn-primary-border: $sp48-primary-border; // Updated to new SP-48 color
