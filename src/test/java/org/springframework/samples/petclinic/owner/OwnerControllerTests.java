@@ -32,6 +32,8 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.LinkedHashSet;
 
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.greaterThan;
@@ -63,6 +65,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class OwnerControllerTests {
 
 	private static final int TEST_OWNER_ID = 1;
+	private static final int TEST_OWNER_ID_NO_VISITS = 2;
+	private static final int TEST_OWNER_ID_MULTIPLE_VISITS = 3;
 
 	@Autowired
 	private MockMvc mockMvc;
@@ -89,18 +93,73 @@ class OwnerControllerTests {
 		return george;
 	}
 
+	private Owner ownerWithNoVisits() {
+		Owner owner = new Owner();
+		owner.setId(TEST_OWNER_ID_NO_VISITS);
+		owner.setFirstName("No");
+		owner.setLastName("Visits");
+		owner.setAddress("123 Main St");
+		owner.setCity("Anytown");
+		owner.setTelephone("1112223333");
+		Pet pet = new Pet();
+		PetType cat = new PetType();
+		cat.setName("cat");
+		pet.setType(cat);
+		pet.setName("Whiskers");
+		pet.setBirthDate(LocalDate.now());
+		owner.addPet(pet);
+		pet.setId(2);
+		return owner;
+	}
+
+	private Owner ownerWithMultipleVisits() {
+		Owner owner = new Owner();
+		owner.setId(TEST_OWNER_ID_MULTIPLE_VISITS);
+		owner.setFirstName("Multi");
+		owner.setLastName("Visit");
+		owner.setAddress("456 Oak Ave");
+		owner.setCity("Otherville");
+		owner.setTelephone("4445556666");
+		Pet pet = new Pet();
+		PetType bird = new PetType();
+		bird.setName("bird");
+		pet.setType(bird);
+		pet.setName("Tweety");
+		pet.setBirthDate(LocalDate.now());
+		owner.addPet(pet);
+		pet.setId(3);
+
+		Visit visit1 = new Visit();
+		visit1.setDate(LocalDate.now().minusDays(10));
+		visit1.setDescription("Checkup");
+		pet.addVisit(visit1);
+
+		Visit visit2 = new Visit();
+		visit2.setDate(LocalDate.now().minusDays(5));
+		visit2.setDescription("Vaccination");
+		pet.addVisit(visit2);
+
+		return owner;
+	}
+
+
 	@BeforeEach
 	void setup() {
 
 		Owner george = george();
+		Visit visit = new Visit();
+		visit.setDate(LocalDate.now());
+		george.getPet("Max").getVisits().add(visit); // Add one visit to George's pet
+
+		Owner ownerNoVisits = ownerWithNoVisits();
+		Owner ownerMultipleVisits = ownerWithMultipleVisits();
+
 		given(this.owners.findByLastNameStartingWith(eq("Franklin"), any(Pageable.class)))
 			.willReturn(new PageImpl<>(List.of(george)));
 
 		given(this.owners.findById(TEST_OWNER_ID)).willReturn(Optional.of(george));
-		Visit visit = new Visit();
-		visit.setDate(LocalDate.now());
-		george.getPet("Max").getVisits().add(visit);
-
+		given(this.owners.findById(TEST_OWNER_ID_NO_VISITS)).willReturn(Optional.of(ownerNoVisits));
+		given(this.owners.findById(TEST_OWNER_ID_MULTIPLE_VISITS)).willReturn(Optional.of(ownerMultipleVisits));
 	}
 
 	@Test
@@ -253,7 +312,8 @@ class OwnerControllerTests {
 			.andExpect(model().attribute("owner", hasProperty("pets", not(empty()))))
 			.andExpect(model().attribute("owner",
 					hasProperty("pets", hasItem(hasProperty("visits", hasSize(greaterThan(0)))))))
-			.andExpect(view().name("owners/ownerDetails"));
+			.andExpect(view().name("owners/ownerDetails"))
+			.andExpect(content().string(org.hamcrest.Matchers.containsString("Max <span class=\"badge badge-info pet-visit-badge\">1 visit</span>")));
 	}
 
 	@Test
@@ -274,6 +334,27 @@ class OwnerControllerTests {
 			.andExpect(status().is3xxRedirection())
 			.andExpect(redirectedUrl("/owners/" + pathOwnerId + "/edit"))
 			.andExpect(flash().attributeExists("error"));
+	}
+
+	// New integration tests for badge rendering and visit counts
+	@Test
+	void showOwnerWithNoVisitsBadge() throws Exception {
+		mockMvc.perform(get("/owners/{ownerId}", TEST_OWNER_ID_NO_VISITS))
+			.andExpect(status().isOk())
+			.andExpect(model().attribute("owner", hasProperty("lastName", is("Visits"))))
+			.andExpect(model().attribute("owner",
+					hasProperty("pets", hasItem(hasProperty("visits", hasSize(0))))))
+			.andExpect(content().string(org.hamcrest.Matchers.containsString("Whiskers <span class=\"badge badge-secondary pet-visit-badge\">No visits</span>")));
+	}
+
+	@Test
+	void showOwnerWithMultipleVisitsBadge() throws Exception {
+		mockMvc.perform(get("/owners/{ownerId}", TEST_OWNER_ID_MULTIPLE_VISITS))
+			.andExpect(status().isOk())
+			.andExpect(model().attribute("owner", hasProperty("lastName", is("Visit"))))
+			.andExpect(model().attribute("owner",
+					hasProperty("pets", hasItem(hasProperty("visits", hasSize(2))))))
+			.andExpect(content().string(org.hamcrest.Matchers.containsString("Tweety <span class=\"badge badge-info pet-visit-badge\">2 visits</span>")));
 	}
 
 }
