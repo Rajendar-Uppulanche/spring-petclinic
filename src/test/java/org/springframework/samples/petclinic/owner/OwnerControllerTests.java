@@ -89,6 +89,17 @@ class OwnerControllerTests {
 		return george;
 	}
 
+	private Owner noPetsOwner() {
+		Owner owner = new Owner();
+		owner.setId(2);
+		owner.setFirstName("Betty");
+		owner.setLastName("Davis");
+		owner.setAddress("638 Cardinal Ave.");
+		owner.setCity("Sun Prairie");
+		owner.setTelephone("6085551749");
+		return owner;
+	}
+
 	@BeforeEach
 	void setup() {
 
@@ -101,6 +112,9 @@ class OwnerControllerTests {
 		visit.setDate(LocalDate.now());
 		george.getPet("Max").getVisits().add(visit);
 
+		// Setup for owner with no pets or visits
+		Owner betty = noPetsOwner();
+		given(this.owners.findById(2)).willReturn(Optional.of(betty));
 	}
 
 	@Test
@@ -253,8 +267,51 @@ class OwnerControllerTests {
 			.andExpect(model().attribute("owner", hasProperty("pets", not(empty()))))
 			.andExpect(model().attribute("owner",
 					hasProperty("pets", hasItem(hasProperty("visits", hasSize(greaterThan(0)))))))
-			.andExpect(view().name("owners/ownerDetails"));
+			.andExpect(view().name("owners/ownerDetails"))
+			.andExpect(content().string(org.hamcrest.Matchers.containsString("<span class=\"badge badge-pill badge-info\" th:if=\"${pet.visitsCount > 0}\" th:text=\"${pet.visitsCount} + ' visit(s)'}\">1 visit(s)</span>"))); // Added assertion for badge
 	}
+
+	@Test
+	void showOwnerWithNoVisits() throws Exception {
+		mockMvc.perform(get("/owners/{ownerId}", 2)) // Assuming owner with ID 2 has no pets or visits
+			.andExpect(status().isOk())
+			.andExpect(model().attribute("owner", hasProperty("lastName", is("Davis"))))
+			.andExpect(model().attribute("owner", hasProperty("pets", empty()))) // No pets for this owner
+			.andExpect(view().name("owners/ownerDetails"))
+			.andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("visit(s)")))) // No visit badges expected
+			.andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("No visits")))); // No "No visits" badge if no pets
+	}
+
+	@Test
+	void showOwnerWithPetButNoVisits() throws Exception {
+		Owner ownerWithPetNoVisits = new Owner();
+		ownerWithPetNoVisits.setId(3);
+		ownerWithPetNoVisits.setFirstName("Peter");
+		ownerWithPetNoVisits.setLastName("Pan");
+		ownerWithPetNoVisits.setAddress("Neverland");
+		ownerWithPetNoVisits.setCity("Fantasy");
+		ownerWithPetNoVisits.setTelephone("1234567890");
+		Pet tinkerbell = new Pet();
+		PetType fairy = new PetType();
+		fairy.setName("fairy");
+		tinkerbell.setType(fairy);
+		tinkerbell.setName("Tinkerbell");
+		tinkerbell.setBirthDate(LocalDate.now());
+		ownerWithPetNoVisits.addPet(tinkerbell);
+		tinkerbell.setId(2); // Assuming a new pet ID
+
+		given(this.owners.findById(3)).willReturn(Optional.of(ownerWithPetNoVisits));
+
+		mockMvc.perform(get("/owners/{ownerId}", 3))
+			.andExpect(status().isOk())
+			.andExpect(model().attribute("owner", hasProperty("lastName", is("Pan"))))
+			.andExpect(model().attribute("owner", hasProperty("pets", hasSize(1))))
+			.andExpect(model().attribute("owner",
+					hasProperty("pets", hasItem(hasProperty("visits", hasSize(0))))))
+			.andExpect(view().name("owners/ownerDetails"))
+			.andExpect(content().string(org.hamcrest.Matchers.containsString("<span class=\"badge badge-pill badge-secondary\" th:if=\"${pet.visitsCount == 0}\" th:text=\"'No visits'\">No visits</span>"))); // Assertion for "No visits" badge
+	}
+
 
 	@Test
 	void processUpdateOwnerFormWithIdMismatch() throws Exception {
