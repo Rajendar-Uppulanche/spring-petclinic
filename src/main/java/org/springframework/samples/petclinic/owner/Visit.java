@@ -19,11 +19,15 @@ import java.time.LocalDate;
 
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.samples.petclinic.model.BaseEntity;
-
+import org.springframework.samples.petclinic.vet.Vet;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.JoinColumn;
 
 /**
  * Simple JavaBean domain object representing a visit.
@@ -42,11 +46,24 @@ public class Visit extends BaseEntity {
 	@NotBlank
 	private String description;
 
+	@ManyToOne
+	@JoinColumn(name = "vet_id") // Foreign key to vets table
+	private Vet veterinarian;
+
+	@Enumerated(EnumType.STRING)
+	@Column(name = "status")
+	private VisitStatus status;
+
+	@ManyToOne
+	@JoinColumn(name = "pet_id") // Foreign key to pets table
+	private Pet pet;
+
 	/**
 	 * Creates a new instance of Visit for tomorrow
 	 */
 	public Visit() {
 		this.date = LocalDate.now().plusDays(1);
+		this.status = VisitStatus.SCHEDULED; // Default status
 	}
 
 	public LocalDate getDate() {
@@ -63,6 +80,30 @@ public class Visit extends BaseEntity {
 
 	public void setDescription(String description) {
 		this.description = description;
+	}
+
+	public Vet getVeterinarian() {
+		return veterinarian;
+	}
+
+	public void setVeterinarian(Vet veterinarian) {
+		this.veterinarian = veterinarian;
+	}
+
+	public VisitStatus getStatus() {
+		return status;
+	}
+
+	public void setStatus(VisitStatus status) {
+		this.status = status;
+	}
+
+	public Pet getPet() {
+		return pet;
+	}
+
+	public void setPet(Pet pet) {
+		this.pet = pet;
 	}
 
 }
