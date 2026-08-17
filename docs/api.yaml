@@ -1,0 +1,297 @@
+openapi: 3.0.0
+info:
+  title: Veterinary Clinic API
+  version: 1.0.0
+  description: API for managing veterinary clinic operations, including appointments, pets, and veterinarians.
+
+servers:
+  - url: http://localhost:5000/api
+    description: Local Development Server
+
+tags:
+  - name: Appointments
+    description: Operations related to veterinary appointments
+
+paths:
+  /appointments:
+    get:
+      summary: Retrieve a list of appointments, with optional filtering
+      tags:
+        - Appointments
+      parameters:
+        - in: query
+          name: start_date
+          schema:
+            type: string
+            format: date-time
+          description: Filter appointments starting from this date (ISO 8601 format, e.g., 2023-10-26T10:00:00)
+          example: 2023-10-26T00:00:00
+        - in: query
+          name: end_date
+          schema:
+            type: string
+            format: date-time
+          description: Filter appointments ending by this date (ISO 8601 format, e.g., 2023-10-27T23:59:59)
+          example: 2023-10-27T23:59:59
+        - in: query
+          name: pet_name
+          schema:
+            type: string
+          description: Filter appointments by pet's name (case-insensitive partial match)
+          example: Buddy
+        - in: query
+          name: owner_name
+          schema:
+            type: string
+          description: Filter appointments by owner's name (case-insensitive partial match)
+          example: Alice
+        - in: query
+          name: veterinarian_id
+          schema:
+            type: integer
+          description: Filter appointments by veterinarian ID
+          example: 1
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [SCHEDULED, COMPLETED, CANCELLED, PENDING]
+          description: Filter appointments by their status
+          example: SCHEDULED
+      responses:
+        '200':
+          description: A list of appointments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Appointment'
+        '400':
+          description: Invalid filter input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      summary: Create a new appointment
+      tags:
+        - Appointments
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AppointmentCreate'
+      responses:
+        '201':
+          description: Appointment created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Appointment'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /appointments/{appointment_id}:
+    get:
+      summary: Retrieve a single appointment by ID
+      tags:
+        - Appointments
+      parameters:
+        - in: path
+          name: appointment_id
+          schema:
+            type: integer
+          required: true
+          description: ID of the appointment to retrieve
+      responses:
+        '200':
+          description: Appointment details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Appointment'
+        '404':
+          description: Appointment not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      summary: Update an existing appointment
+      tags:
+        - Appointments
+      parameters:
+        - in: path
+          name: appointment_id
+          schema:
+            type: integer
+          required: true
+          description: ID of the appointment to update
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AppointmentUpdate'
+      responses:
+        '200':
+          description: Appointment updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Appointment'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Appointment not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      summary: Delete an appointment
+      tags:
+        - Appointments
+      parameters:
+        - in: path
+          name: appointment_id
+          schema:
+            type: integer
+          required: true
+          description: ID of the appointment to delete
+      responses:
+        '204':
+          description: Appointment deleted successfully
+        '404':
+          description: Appointment not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    Appointment:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+          description: Unique identifier for the appointment
+        pet_name:
+          type: string
+          description: Name of the pet
+        owner_name:
+          type: string
+          description: Name of the pet owner
+        appointment_date:
+          type: string
+          format: date-time
+          description: Date and time of the appointment (ISO 8601)
+        reason:
+          type: string
+          description: Reason for the appointment
+        veterinarian_id:
+          type: integer
+          nullable: true
+          description: ID of the assigned veterinarian
+        status:
+          type: string
+          enum: [SCHEDULED, COMPLETED, CANCELLED, PENDING]
+          description: Current status of the appointment
+      required:
+        - pet_name
+        - owner_name
+        - appointment_date
+        - reason
+        - status
+
+    AppointmentCreate:
+      type: object
+      properties:
+        pet_name:
+          type: string
+          description: Name of the pet
+        owner_name:
+          type: string
+          description: Name of the pet owner
+        appointment_date:
+          type: string
+          format: date-time
+          description: Date and time of the appointment (ISO 8601)
+        reason:
+          type: string
+          description: Reason for the appointment
+        veterinarian_id:
+          type: integer
+          nullable: true
+          description: ID of the assigned veterinarian
+        status:
+          type: string
+          enum: [SCHEDULED, COMPLETED, CANCELLED, PENDING]
+          default: SCHEDULED
+          description: Initial status of the appointment
+      required:
+        - pet_name
+        - owner_name
+        - appointment_date
+        - reason
+
+    AppointmentUpdate:
+      type: object
+      properties:
+        pet_name:
+          type: string
+          description: Name of the pet
+        owner_name:
+          type: string
+          description: Name of the pet owner
+        appointment_date:
+          type: string
+          format: date-time
+          description: Date and time of the appointment (ISO 8601)
+        reason:
+          type: string
+          description: Reason for the appointment
+        veterinarian_id:
+          type: integer
+          nullable: true
+          description: ID of the assigned veterinarian
+        status:
+          type: string
+          enum: [SCHEDULED, COMPLETED, CANCELLED, PENDING]
+          description: Current status of the appointment
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: A brief error message
+        details:
+          type: object
+          description: More detailed error information, e.g., validation errors
+      required:
+        - error
