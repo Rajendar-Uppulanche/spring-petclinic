@@ -103,7 +103,7 @@ class OwnerController {
 			lastName = lastName.strip();
 		}
 
-		// find owners by last name
+		// find owners by last name using the new search method
 		Page<Owner> ownersResults = findPaginatedForOwnersLastName(page, lastName);
 		if (ownersResults.isEmpty()) {
 			// no owners found
@@ -133,7 +133,7 @@ class OwnerController {
 	private Page<Owner> findPaginatedForOwnersLastName(int page, String lastname) {
 		int pageSize = 5;
 		Pageable pageable = PageRequest.of(page - 1, pageSize);
-		return owners.findByLastNameStartingWith(lastname, pageable);
+		return owners.findByLastNameContainingIgnoreCaseOrderByLastNameAsc(lastname, pageable);
 	}
 
 	@GetMapping("/owners/{ownerId}/edit")
