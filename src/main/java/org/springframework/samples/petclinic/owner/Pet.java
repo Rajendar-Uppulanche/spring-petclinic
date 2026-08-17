@@ -32,6 +32,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 
 /**
  * Simple business object representing a pet.
@@ -80,6 +81,11 @@ public class Pet extends NamedEntity {
 
 	public void addVisit(Visit visit) {
 		getVisits().add(visit);
+	}
+
+	@Transient
+	public int getVisitCount() {
+		return getVisits().size();
 	}
 
 }
