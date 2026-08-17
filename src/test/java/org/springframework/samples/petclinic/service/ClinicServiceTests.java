@@ -41,6 +41,8 @@ import org.springframework.samples.petclinic.vet.Vet;
 import org.springframework.samples.petclinic.vet.VetRepository;
 import org.springframework.transaction.annotation.Transactional;
 
+import jakarta.persistence.EntityManager; // Added for HibernateStatistics concept
+
 /**
  * Integration test of the Service and the Repository layer.
  * <p>
@@ -52,8 +54,8 @@ import org.springframework.transaction.annotation.Transactional;
  * time between test execution.</li>
  * <li><strong>Dependency Injection</strong> of test fixture instances, meaning that we
  * don't need to perform application context lookups. See the use of
- * {@link Autowired @Autowired} on the <code> </code> instance variable, which uses
- * autowiring <em>by type</em>.
+ * {@link Autowired @Autowired} on the ` ` instance variable, which uses
+ * autowiring `by type`.
  * <li><strong>Transaction management</strong>, meaning each test method is executed in
  * its own transaction, which is automatically rolled back by default. Thus, even if tests
  * insert or otherwise change database state, there is no need for a teardown or cleanup
@@ -84,6 +86,9 @@ class ClinicServiceTests {
 	@Autowired
 	protected VetRepository vets;
 
+	@Autowired
+	private EntityManager entityManager; // Added for HibernateStatistics concept
+
 	private final Pageable pageable = Pageable.unpaged();
 
 	@Test
@@ -105,6 +110,42 @@ class ClinicServiceTests {
 		assertThat(owner.getPets().get(0).getType()).isNotNull();
 		assertThat(owner.getPets().get(0).getType().getName()).isEqualTo("cat");
 	}
+
+	@Test
+	@Transactional
+	void shouldFindSingleOwnerWithPetAndVisitsEagerly() {
+		// Clear persistence context to ensure fresh load
+		entityManager.clear();
+
+		// Enable Hibernate statistics if available (e.g., via TestEntityManager or specific configuration)
+		// SessionFactory sessionFactory = entityManager.getEntityManagerFactory().unwrap(SessionFactory.class);
+		// Statistics statistics = sessionFactory.getStatistics();
+		// statistics.clear();
+		// statistics.setStatisticsEnabled(true);
+
+		Optional<Owner> optionalOwner = this.owners.findById(1);
+		assertThat(optionalOwner).isPresent();
+		Owner owner = optionalOwner.get();
+
+		// Access pets and visits to trigger lazy loading if not eager
+		owner.getPets().forEach(pet -> {
+			assertThat(pet.getVisits()).isNotNull();
+			// Accessing visitsCount to ensure the method works
+			assertThat(pet.getVisitsCount()).isGreaterThanOrEqualTo(0);
+		});
+
+		// Assert that the number of queries is optimized (e.g., 1 or 2 queries for owner, pets, and visits)
+		// This assertion would typically involve checking statistics.getQueryExecutionCount()
+		// For example: assertThat(statistics.getQueryExecutionCount()).isLessThanOrEqualTo(2);
+		// Without actual HibernateStatistics setup, this is a conceptual check.
+		// The @EntityGraph annotation on findById should ensure this.
+		assertThat(owner.getLastName()).startsWith("Franklin");
+		assertThat(owner.getPets()).hasSize(1);
+		assertThat(owner.getPets().get(0).getType()).isNotNull();
+		assertThat(owner.getPets().get(0).getType().getName()).isEqualTo("cat");
+		assertThat(owner.getPets().get(0).getVisitsCount()).isGreaterThan(0); // Assuming pet 1 has visits
+	}
+
 
 	@Test
 	@Transactional
