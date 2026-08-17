@@ -87,12 +87,41 @@ class ClinicServiceTests {
 	private final Pageable pageable = Pageable.unpaged();
 
 	@Test
-	void shouldFindOwnersByLastName() {
+	void shouldFindOwnersByLastNameStartingWith() {
 		Page<Owner> owners = this.owners.findByLastNameStartingWith("Davis", pageable);
 		assertThat(owners).hasSize(2);
 
 		owners = this.owners.findByLastNameStartingWith("Daviss", pageable);
 		assertThat(owners).isEmpty();
+	}
+
+	@Test
+	void shouldFindOwnersByLastNameContainingIgnoreCase() {
+		// Test exact match, case-insensitive
+		Page<Owner> owners = this.owners.findByLastNameContainingIgnoreCase("Franklin", pageable);
+		assertThat(owners).hasSize(1);
+		assertThat(owners.iterator().next().getLastName()).isEqualTo("Franklin");
+
+		owners = this.owners.findByLastNameContainingIgnoreCase("franklin", pageable);
+		assertThat(owners).hasSize(1);
+		assertThat(owners.iterator().next().getLastName()).isEqualTo("Franklin");
+
+		// Test partial match, case-insensitive
+		owners = this.owners.findByLastNameContainingIgnoreCase("rank", pageable);
+		assertThat(owners).hasSize(1); // Franklin
+		assertThat(owners.iterator().next().getLastName()).isEqualTo("Franklin");
+
+		owners = this.owners.findByLastNameContainingIgnoreCase("ranklin", pageable);
+		assertThat(owners).hasSize(1); // Franklin
+		assertThat(owners.iterator().next().getLastName()).isEqualTo("Franklin");
+
+		// Test no match
+		owners = this.owners.findByLastNameContainingIgnoreCase("NonExistent", pageable);
+		assertThat(owners).isEmpty();
+
+		// Test empty string (should return all)
+		owners = this.owners.findByLastNameContainingIgnoreCase("", pageable);
+		assertThat(owners).hasSize(10); // Assuming 10 owners in the test data
 	}
 
 	@Test
@@ -109,7 +138,7 @@ class ClinicServiceTests {
 	@Test
 	@Transactional
 	void shouldInsertOwner() {
-		Page<Owner> owners = this.owners.findByLastNameStartingWith("Schultz", pageable);
+		Page<Owner> owners = this.owners.findByLastNameContainingIgnoreCase("Schultz", pageable);
 		int found = (int) owners.getTotalElements();
 
 		Owner owner = new Owner();
@@ -121,7 +150,7 @@ class ClinicServiceTests {
 		this.owners.save(owner);
 		assertThat(owner.getId()).isNotZero();
 
-		owners = this.owners.findByLastNameStartingWith("Schultz", pageable);
+		owners = this.owners.findByLastNameContainingIgnoreCase("Schultz", pageable);
 		assertThat(owners.getTotalElements()).isEqualTo(found + 1);
 	}
 
@@ -299,7 +328,7 @@ class ClinicServiceTests {
 
 		Pet pet2 = new Pet();
 		pet2.setName("samepetname"); // Case-insensitive duplicate name, but for a
-										// different owner
+	// different owner
 		pet2.setType(catType);
 		pet2.setBirthDate(LocalDate.now());
 		owner2.addPet(pet2);
