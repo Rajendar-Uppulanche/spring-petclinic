@@ -48,13 +48,13 @@ import org.springframework.transaction.annotation.Transactional;
  * by the Spring TestContext Framework:
  * </p>
  * <ul>
- * <li><strong>Spring IoC container caching</strong> which spares us unnecessary set up
+ * <li>**Spring IoC container caching** which spares us unnecessary set up
  * time between test execution.</li>
- * <li><strong>Dependency Injection</strong> of test fixture instances, meaning that we
+ * <li>**Dependency Injection** of test fixture instances, meaning that we
  * don't need to perform application context lookups. See the use of
- * {@link Autowired @Autowired} on the <code> </code> instance variable, which uses
- * autowiring <em>by type</em>.
- * <li><strong>Transaction management</strong>, meaning each test method is executed in
+ * {@link Autowired @Autowired} on the ` ` instance variable, which uses
+ * autowiring *by type*.
+ * <li>**Transaction management**, meaning each test method is executed in
  * its own transaction, which is automatically rolled back by default. Thus, even if tests
  * insert or otherwise change database state, there is no need for a teardown or cleanup
  * script.
@@ -87,12 +87,37 @@ class ClinicServiceTests {
 	private final Pageable pageable = Pageable.unpaged();
 
 	@Test
-	void shouldFindOwnersByLastName() {
+	void shouldFindOwnersByLastNameStartingWith() {
 		Page<Owner> owners = this.owners.findByLastNameStartingWith("Davis", pageable);
 		assertThat(owners).hasSize(2);
 
 		owners = this.owners.findByLastNameStartingWith("Daviss", pageable);
 		assertThat(owners).isEmpty();
+	}
+
+	@Test
+	void shouldFindOwnersByLastNameContainingIgnoreCaseAndOrdered() {
+		// Test partial match and case-insensitivity
+		Page<Owner> ownersPage = this.owners.findByLastNameContainingIgnoreCaseOrderByLastNameAsc("son", pageable);
+		assertThat(ownersPage).hasSize(3); // Franklin, Jackson, Johnson
+		assertThat(ownersPage.getContent().get(0).getLastName()).isEqualTo("Franklin"); // Ordered by last name
+		assertThat(ownersPage.getContent().get(1).getLastName()).isEqualTo("Jackson");
+		assertThat(ownersPage.getContent().get(2).getLastName()).isEqualTo("Johnson");
+
+		ownersPage = this.owners.findByLastNameContainingIgnoreCaseOrderByLastNameAsc("frank", pageable);
+		assertThat(ownersPage).hasSize(1);
+		assertThat(ownersPage.getContent().get(0).getLastName()).isEqualTo("Franklin");
+
+		ownersPage = this.owners.findByLastNameContainingIgnoreCaseOrderByLastNameAsc("FRANK", pageable);
+		assertThat(ownersPage).hasSize(1);
+		assertThat(ownersPage.getContent().get(0).getLastName()).isEqualTo("Franklin");
+
+		ownersPage = this.owners.findByLastNameContainingIgnoreCaseOrderByLastNameAsc("nonexistent", pageable);
+		assertThat(ownersPage).isEmpty();
+
+		// Test empty string returns all (or paginated all)
+		ownersPage = this.owners.findByLastNameContainingIgnoreCaseOrderByLastNameAsc("", pageable);
+		assertThat(ownersPage.getTotalElements()).isGreaterThan(0); // Should return all owners
 	}
 
 	@Test
