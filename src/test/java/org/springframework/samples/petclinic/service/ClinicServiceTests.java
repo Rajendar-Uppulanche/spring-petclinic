@@ -24,12 +24,15 @@ import java.time.LocalDate;
 import java.util.Collection;
 import java.util.Optional;
 
+import org.hibernate.SessionFactory;
+import org.hibernate.stat.Statistics;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase.Replace;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.samples.petclinic.owner.Owner;
 import org.springframework.samples.petclinic.owner.OwnerRepository;
@@ -40,6 +43,8 @@ import org.springframework.samples.petclinic.owner.Visit;
 import org.springframework.samples.petclinic.vet.Vet;
 import org.springframework.samples.petclinic.vet.VetRepository;
 import org.springframework.transaction.annotation.Transactional;
+
+import jakarta.persistence.EntityManagerFactory;
 
 /**
  * Integration test of the Service and the Repository layer.
@@ -83,6 +88,9 @@ class ClinicServiceTests {
 
 	@Autowired
 	protected VetRepository vets;
+
+	@Autowired
+	private EntityManagerFactory entityManagerFactory;
 
 	private final Pageable pageable = Pageable.unpaged();
 
@@ -310,6 +318,38 @@ class ClinicServiceTests {
 		// Verify both exist
 		assertThat(owner1.getPet("SamePetName")).isNotNull();
 		assertThat(owner2.getPet("samepetname")).isNotNull();
+	}
+
+	@Test
+	@Transactional
+	void shouldFindOwnerWithPetsAndVisitsWithoutNPlus1() {
+		// Enable Hibernate statistics
+		SessionFactory sessionFactory = entityManagerFactory.unwrap(SessionFactory.class);
+		Statistics statistics = sessionFactory.getStatistics();
+		statistics.clear();
+		statistics.setStatisticsEnabled(true);
+
+		// Fetch an owner with pets and visits using the new method
+		Optional<Owner> optionalOwner = this.owners.findByIdWithPetsAndVisits(1);
+		assertThat(optionalOwner).isPresent();
+		Owner owner = optionalOwner.get();
+
+		// Access pets and visits to ensure they are loaded
+		assertThat(owner.getPets()).isNotEmpty();
+		for (Pet pet : owner.getPets()) {
+			assertThat(pet.getVisits()).isNotNull();
+			// Accessing size should not trigger additional queries if eagerly fetched
+			pet.getVisits().size();
+		}
+
+		// Assert that the number of queries is minimal (e.g., 1 for owner, pets, visits)
+		long queryCount = statistics.getQueryExecutionCount();
+		// For a single owner with pets and their visits, 1 query is ideal.
+		// If there are other eager fetches on Owner or Pet, it might be more.
+		// Let's aim for 1 or 2, as sometimes Hibernate might issue a separate query for types or other related entities.
+		assertThat(queryCount).isLessThanOrEqualTo(2);
+
+		statistics.setStatisticsEnabled(false);
 	}
 
 }
