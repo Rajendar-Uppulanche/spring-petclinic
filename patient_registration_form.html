@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Patient Registration</title>
+    <link rel="stylesheet" href="/css/patient_registration.css"> 
+</head>
+<body>
+    <div class="patient-registration-form">
+        <h2 class="patient-registration-header">Register New Patient</h2>
+        <form>
+            <div class="form-field">
+                <label for="firstName">First Name:</label>
+                <input type="text" id="firstName" name="firstName" required>
+            </div>
+            <div class="form-field">
+                <label for="lastName">Last Name:</label>
+                <input type="text" id="lastName" name="lastName" required>
+            </div>
+            <div class="form-field">
+                <label for="dob">Date of Birth:</label>
+                <input type="date" id="dob" name="dob" required>
+            </div>
+            <button type="submit" class="patient-registration-submit-button">Register Patient</button>
+            <a href="/dashboard" class="patient-registration-cancel-link">Cancel</a>
+        </form>
+    </div>
+</body>
+</html>
