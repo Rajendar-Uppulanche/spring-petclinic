@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html xmlns:th="https://www.thymeleaf.org" th:replace="~{fragments/layout :: layout (~{::body},'visits')}">
+
+<body>
+
+    <h2>Visits</h2>
+
+    <form th:object="${visitFilterCriteria}" class="form-horizontal" id="search-visit-form" action="/visits/search/results" method="get">
+        <div class="form-group">
+            <div class="control-group" id="startDateGroup">
+                <label class="col-sm-2 control-label">Start Date </label>
+                <div class="col-sm-10">
+                    <input th:field="*{startDate}" type="date" class="form-control" size="30" />
+                </div>
+            </div>
+            <div class="control-group" id="endDateGroup">
+                <label class="col-sm-2 control-label">End Date </label>
+                <div class="col-sm-10">
+                    <input th:field="*{endDate}" type="date" class="form-control" size="30" />
+                </div>
+            </div>
+            <div class="control-group" id="petNameGroup">
+                <label class="col-sm-2 control-label">Pet Name </label>
+                <div class="col-sm-10">
+                    <input th:field="*{petName}" class="form-control" size="30" maxlength="80" />
+                </div>
+            </div>
+            <div class="control-group" id="ownerLastNameGroup">
+                <label class="col-sm-2 control-label">Owner Last Name </label>
+                <div class="col-sm-10">
+                    <input th:field="*{ownerLastName}" class="form-control" size="30" maxlength="80" />
+                </div>
+            </div>
+        </div>
+        <div class="form-group">
+            <div class="col-sm-offset-2 col-sm-10">
+                <button type="submit" class="btn btn-default">Apply Filters</button>
+                <button type="button" class="btn btn-default" onclick="window.location.href='/visits/search'">Clear Filters</button>
+            </div>
+        </div>
+    </form>
+
+    <table id="visits" class="table table-striped">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Description</th>
+                <th>Pet</th>
+                <th>Owner</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr th:each="visit : ${visits}">
+                <td th:text="${#temporals.format(visit.date, 'yyyy/MM/dd')}"></td>
+                <td th:text="${visit.description}"></td>
+                <td th:text="${visit.pet.name}"></td>
+                <td th:text="${visit.pet.owner.firstName + ' ' + visit.pet.owner.lastName}"></td>
+            </tr>
+        </tbody>
+    </table>
+
+</body>
+</html>
