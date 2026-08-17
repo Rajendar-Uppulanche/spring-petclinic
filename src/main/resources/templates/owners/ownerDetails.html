@@ -49,7 +49,12 @@
       <td valign="top">
         <dl class="dl-horizontal">
           <dt th:text="#{name}">Name</dt>
-          <dd th:text="${pet.name}"></dd>
+          <dd>
+            <span th:text="${pet.name}"></span>
+            <span th:if="${pet.visitCount == 0}" class="badge badge-secondary pet-visit-badge">No visits</span>
+            <span th:if="${pet.visitCount == 1}" class="badge badge-info pet-visit-badge">1 visit</span>
+            <span th:if="${pet.visitCount > 1}" class="badge badge-info pet-visit-badge" th:text="${pet.visitCount + ' visits'}"></span>
+          </dd>
           <dt th:text="#{birthDate}">Birth Date</dt>
           <dd th:text="${#temporals.format(pet.birthDate, 'yyyy-MM-dd')}"></dd>
           <dt th:text="#{type}">Type</dt>
