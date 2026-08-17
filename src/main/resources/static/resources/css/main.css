@@ -1,0 +1,123 @@
+/*
+ * Copyright 2012-2025 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/* General styles */
+body {
+    font-family: 'Open Sans', sans-serif;
+    color: #333;
+    background-color: #f8f9fa;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    color: #0056b3;
+}
+
+/* Navigation bar styles */
+.navbar {
+    background-color: #007bff;
+    border-bottom: 1px solid #0056b3;
+}
+
+.navbar-brand {
+    color: #fff !important;
+    font-weight: bold;
+}
+
+.navbar-nav .nav-link {
+    color: #fff !important;
+}
+
+.navbar-nav .nav-link:hover {
+    color: #e9ecef !important;
+}
+
+/* Table styles */
+.table {
+    background-color: #fff;
+    border-radius: .25rem;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.table th {
+    background-color: #e9ecef;
+    color: #495057;
+}
+
+/* Button styles */
+.btn-primary {
+    background-color: #007bff;
+    border-color: #007bff;
+}
+
+.btn-primary:hover {
+    background-color: #0056b3;
+    border-color: #0056b3;
+}
+
+.btn-success {
+    background-color: #28a745;
+    border-color: #28a745;
+}
+
+.btn-success:hover {
+    background-color: #218838;
+    border-color: #218838;
+}
+
+/* Form styles */
+.form-control {
+    border-radius: .25rem;
+}
+
+.form-group label {
+    font-weight: bold;
+}
+
+/* Alerts */
+.alert {
+    margin-top: 1rem;
+}
+
+/* Specific styles for pet-visit-badge */
+.pet-visit-badge {
+    margin-left: 5px;
+    font-size: 0.8em;
+    vertical-align: middle;
+    padding: .3em .6em;
+    border-radius: .25rem;
+}
+
+.badge-secondary {
+    color: #fff;
+    background-color: #6c757d;
+}
+
+.badge-info {
+    color: #fff;
+    background-color: #17a2b8;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .dl-horizontal dt {
+        float: none;
+        width: auto;
+        text-align: left;
+    }
+    .dl-horizontal dd {
+        margin-left: 0;
+    }
+}
