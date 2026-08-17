@@ -20,6 +20,7 @@ import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.ResponseEntity; // Added for new API endpoint
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -69,6 +70,13 @@ class VetController {
 		Vets vets = new Vets();
 		vets.getVetList().addAll(this.vetRepository.findAll());
 		return vets;
+	}
+
+	// New API endpoint to get all vets as a direct list, useful for frontend dropdowns
+	@GetMapping("/api/vets/all")
+	@ResponseBody
+	public ResponseEntity<List<Vet>> getAllVetsApi() {
+		return ResponseEntity.ok(vetRepository.findAll().stream().toList());
 	}
 
 }
