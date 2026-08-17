@@ -22,6 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.springframework.dao.DataIntegrityViolationException;
 import java.time.LocalDate;
 import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
@@ -52,7 +53,7 @@ import org.springframework.transaction.annotation.Transactional;
  * time between test execution.</li>
  * <li><strong>Dependency Injection</strong> of test fixture instances, meaning that we
  * don't need to perform application context lookups. See the use of
- * {@link Autowired @Autowired} on the <code> </code> instance variable, which uses
+ * {@link Autowired @Autowired} on the ` ` instance variable, which uses
  * autowiring <em>by type</em>.
  * <li><strong>Transaction management</strong>, meaning each test method is executed in
  * its own transaction, which is automatically rolled back by default. Thus, even if tests
@@ -93,6 +94,35 @@ class ClinicServiceTests {
 
 		owners = this.owners.findByLastNameStartingWith("Daviss", pageable);
 		assertThat(owners).isEmpty();
+	}
+
+	@Test
+	void shouldFindOwnersByLastNameContainingIgnoreCaseOrderByLastNameAsc() {
+		// Test partial match and case-insensitivity
+		Page<Owner> ownersPage = this.owners.findByLastNameContainingIgnoreCaseOrderByLastNameAsc("da", pageable);
+		List<Owner> owners = ownersPage.getContent();
+		assertThat(owners).hasSize(2); // Davis, Davidson
+		assertThat(owners.get(0).getLastName()).isEqualTo("Davis");
+		assertThat(owners.get(1).getLastName()).isEqualTo("Davidson");
+
+		// Test full match, case-insensitivity
+		ownersPage = this.owners.findByLastNameContainingIgnoreCaseOrderByLastNameAsc("franklin", pageable);
+		owners = ownersPage.getContent();
+		assertThat(owners).hasSize(1);
+		assertThat(owners.get(0).getLastName()).isEqualTo("Franklin");
+
+		// Test no match
+		ownersPage = this.owners.findByLastNameContainingIgnoreCaseOrderByLastNameAsc("nonexistent", pageable);
+		assertThat(ownersPage).isEmpty();
+
+		// Test empty string (should return all owners, ordered)
+		ownersPage = this.owners.findByLastNameContainingIgnoreCaseOrderByLastNameAsc("", pageable);
+		owners = ownersPage.getContent();
+		assertThat(owners).hasSize(10); // Assuming 10 owners in test data
+		assertThat(owners.get(0).getLastName()).isEqualTo("Black");
+		assertThat(owners.get(1).getLastName()).isEqualTo("Davis");
+		assertThat(owners.get(2).getLastName()).isEqualTo("Davidson");
+		// ... and so on, verifying alphabetical order
 	}
 
 	@Test
