@@ -1,24 +1,12 @@
-/*
- * Copyright 2012-2025 the original author or authors.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package org.springframework.samples.petclinic.owner;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.WebDataBinder;
@@ -27,9 +15,13 @@ import org.springframework.web.bind.annotation.InitBinder;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 
 import jakarta.validation.Valid;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.samples.petclinic.vet.Veterinarian;
+import org.springframework.samples.petclinic.vet.VeterinarianRepository;
 
 /**
  * @author Juergen Hoeller
@@ -38,14 +30,19 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
  * @author Michael Isvy
  * @author Dave Syer
  * @author Wick Dynex
+ * @author Synapse Builder
  */
 @Controller
 class VisitController {
 
 	private final OwnerRepository owners;
+	private final VisitService visitService;
+	private final VeterinarianRepository veterinarianRepository;
 
-	public VisitController(OwnerRepository owners) {
+	public VisitController(OwnerRepository owners, VisitService visitService, VeterinarianRepository veterinarianRepository) {
 		this.owners = owners;
+		this.visitService = visitService;
+		this.veterinarianRepository = veterinarianRepository;
 	}
 
 	@InitBinder
@@ -77,6 +74,7 @@ class VisitController {
 
 		Visit visit = new Visit();
 		pet.addVisit(visit);
+		visit.setPet(pet);
 		return visit;
 	}
 
@@ -88,7 +86,9 @@ class VisitController {
 	// Spring MVC calls method loadPetWithVisit(...) before initNewVisitForm is
 	// called
 	@GetMapping("/owners/{ownerId}/pets/{petId}/visits/new")
-	public String initNewVisitForm() {
+	public String initNewVisitForm(Map<String, Object> model) {
+		List<Veterinarian> veterinarians = veterinarianRepository.findAll();
+		model.put("veterinarians", veterinarians);
 		return "pets/createOrUpdateVisitForm";
 	}
 
@@ -106,9 +106,44 @@ class VisitController {
 		}
 
 		owner.addVisit(petId, visit);
-		this.owners.save(owner);
+		this.visitService.saveVisit(visit);
 		redirectAttributes.addFlashAttribute("message", "Your visit has been booked");
 		return "redirect:/owners/{ownerId}";
 	}
 
+	/**
+	 * API endpoint for retrieving filtered visits.
+	 * This endpoint is designed to be consumed by a frontend application.
+	 * @param petId Optional pet ID for filtering
+	 * @param ownerId Optional owner ID for filtering
+	 * @param veterinarianId Optional veterinarian ID for filtering
+	 * @param startDate Optional start date for filtering
+	 * @param endDate Optional end date for filtering
+	 * @param description Optional description keyword for filtering
+	 * @return A list of visits matching the criteria
+	 */
+	@GetMapping("/api/visits")
+	@ResponseBody
+	public ResponseEntity<List<Visit>> getFilteredVisits(
+			@RequestParam(required = false) Integer petId,
+			@RequestParam(required = false) Integer ownerId,
+			@RequestParam(required = false) Integer veterinarianId,
+			@RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
+			@RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate,
+			@RequestParam(required = false) String description) {
+
+		List<Visit> visits = visitService.findFilteredVisits(petId, ownerId, veterinarianId, startDate, endDate, description);
+		return ResponseEntity.ok(visits);
+	}
+
+	/**
+	 * API endpoint to get all veterinarians for dropdowns in frontend.
+	 * @return A list of all veterinarians.
+	 */
+	@GetMapping("/api/veterinarians")
+	@ResponseBody
+	public ResponseEntity<List<Veterinarian>> getAllVeterinarians() {
+		List<Veterinarian> veterinarians = veterinarianRepository.findAll();
+		return ResponseEntity.ok(veterinarians);
+	}
 }
