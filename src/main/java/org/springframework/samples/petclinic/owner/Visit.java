@@ -15,21 +15,25 @@
  */
 package org.springframework.samples.petclinic.owner;
 
-import java.time.LocalDate;
-
-import org.springframework.format.annotation.DateTimeFormat;
-import org.springframework.samples.petclinic.model.BaseEntity;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.samples.petclinic.model.BaseEntity;
+import org.springframework.samples.petclinic.vet.Veterinarian;
+
+import java.time.LocalDate;
 
 /**
  * Simple JavaBean domain object representing a visit.
  *
  * @author Ken Krebs
- * @author Dave Syer
+ * @author Juergen Hoeller
+ * @author Maciej Szarlinski
+ * @author Wick Dynex
  */
 @Entity
 @Table(name = "visits")
@@ -39,14 +43,23 @@ public class Visit extends BaseEntity {
 	@DateTimeFormat(pattern = "yyyy-MM-dd")
 	private LocalDate date;
 
-	@NotBlank
+	@NotEmpty
+	@Column(name = "description")
 	private String description;
 
+	@ManyToOne
+	@JoinColumn(name = "pet_id")
+	private Pet pet;
+
+	@ManyToOne
+	@JoinColumn(name = "veterinarian_id")
+	private Veterinarian veterinarian;
+
 	/**
-	 * Creates a new instance of Visit for tomorrow
+	 * Creates a new instance of Visit for the current date
 	 */
 	public Visit() {
-		this.date = LocalDate.now().plusDays(1);
+		this.date = LocalDate.now();
 	}
 
 	public LocalDate getDate() {
@@ -63,6 +76,22 @@ public class Visit extends BaseEntity {
 
 	public void setDescription(String description) {
 		this.description = description;
+	}
+
+	public Pet getPet() {
+		return this.pet;
+	}
+
+	public void setPet(Pet pet) {
+		this.pet = pet;
+	}
+
+	public Veterinarian getVeterinarian() {
+		return veterinarian;
+	}
+
+	public void setVeterinarian(Veterinarian veterinarian) {
+		this.veterinarian = veterinarian;
 	}
 
 }
