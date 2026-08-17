@@ -20,6 +20,8 @@ import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 /**
  * Repository class for <code>Owner</code> domain objects. All method names are compliant
@@ -58,5 +60,15 @@ public interface OwnerRepository extends JpaRepository<Owner, Integer> {
 	 * input for id)
 	 */
 	Optional<Owner> findById(Integer id);
+
+	/**
+	 * Retrieve an {@link Owner} from the data store by id, eagerly fetching its {@link Pet}s
+	 * and each {@link Pet}'s {@link Visit}s to prevent N+1 query issues.
+	 * @param id the id to search for
+	 * @return an {@link Optional} containing the {@link Owner} with eagerly loaded pets and visits if found, or an empty
+	 * {@link Optional} if not found.
+	 */
+	@Query("SELECT owner FROM Owner owner LEFT JOIN FETCH owner.pets pet LEFT JOIN FETCH pet.visits WHERE owner.id = :id")
+	Optional<Owner> findByIdWithPetsAndVisits(@Param("id") Integer id);
 
 }
