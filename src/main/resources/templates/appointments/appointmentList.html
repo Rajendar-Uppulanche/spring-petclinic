@@ -1,0 +1,75 @@
+<html xmlns:th="https://www.thymeleaf.org" th:replace="~{fragments/layout :: layout (~{::body},'appointments')}">
+
+<body>
+
+  <h2>Appointments</h2>
+
+  <form th:action="@{/appointments}" method="get" class="form-horizontal" id="search-appointment-form">
+    <div class="form-group">
+      <div class="control-group" id="date">
+        <label class="col-sm-2 control-label">Date </label>
+        <div class="col-sm-10">
+          <input th:field="${date}" type="date" class="form-control" size="30" maxlength="80" />
+        </div>
+      </div>
+      <div class="control-group" id="petName">
+        <label class="col-sm-2 control-label">Pet Name </label>
+        <div class="col-sm-10">
+          <input th:field="${petName}" class="form-control" size="30" maxlength="80" />
+        </div>
+      </div>
+      <div class="control-group" id="ownerLastName">
+        <label class="col-sm-2 control-label">Owner Last Name </label>
+        <div class="col-sm-10">
+          <input th:field="${ownerLastName}" class="form-control" size="30" maxlength="80" />
+        </div>
+      </div>
+      <div class="control-group" id="vetLastName">
+        <label class="col-sm-2 control-label">Vet Last Name </label>
+        <div class="col-sm-10">
+          <input th:field="${vetLastName}" class="form-control" size="30" maxlength="80" />
+        </div>
+      </div>
+      <div class="control-group" id="status">
+        <label class="col-sm-2 control-label">Status </label>
+        <div class="col-sm-10">
+          <select th:field="${status}" class="form-control">
+            <option value="">-- Select Status --</option>
+            <option th:each="s : ${statuses}" th:value="${s}" th:text="${s}"></option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="form-group">
+      <div class="col-sm-offset-2 col-sm-10">
+        <button type="submit" class="btn btn-default">Find Appointments</button>
+      </div>
+    </div>
+  </form>
+
+  <br/>
+  <table id="appointmentsTable" class="table table-striped">
+    <thead>
+      <tr>
+        <th style="width: 150px;">Date</th>
+        <th>Description</th>
+        <th>Pet</th>
+        <th>Owner</th>
+        <th>Vet</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr th:each="appointment : ${appointments}">
+        <td th:text="${#temporals.format(appointment.date, 'yyyy-MM-dd')}"></td>
+        <td th:text="${appointment.description}"></td>
+        <td th:text="${appointment.pet.name}"></td>
+        <td th:text="${appointment.owner.firstName + ' ' + appointment.owner.lastName}"></td>
+        <td th:text="${appointment.vet.firstName + ' ' + appointment.vet.lastName}"></td>
+        <td th:text="${appointment.status}"></td>
+      </tr>
+    </tbody>
+  </table>
+
+</body>
+</html>
