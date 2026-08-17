@@ -16,9 +16,12 @@
 
 package org.springframework.samples.petclinic.owner;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath; // Added for API tests
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
@@ -27,12 +30,19 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledInNativeImage;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest; // Changed from boot.webmvc.test
+import org.springframework.boot.test.mock.mockito.MockBean; // Changed from MockitoBean
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.test.context.aot.DisabledInAotMode;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.samples.petclinic.vet.Vet;
+import org.springframework.samples.petclinic.vet.VetRepository;
 
 import java.time.LocalDate;
+import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -53,16 +63,50 @@ class VisitControllerTests {
 	@Autowired
 	private MockMvc mockMvc;
 
-	@MockitoBean
+	@MockBean // Changed to MockBean
 	private OwnerRepository owners;
+
+	@MockBean // Added for VisitService
+	private VisitService visitService;
+
+	@MockBean // Added for VetRepository
+	private VetRepository vets;
+
+	private Owner george;
+	private Pet pet;
+	private Vet vet1;
+	private Visit visit1;
 
 	@BeforeEach
 	void init() {
-		Owner owner = new Owner();
-		Pet pet = new Pet();
-		owner.addPet(pet);
+		george = new Owner();
+		george.setId(TEST_OWNER_ID);
+		george.setFirstName("George");
+		george.setLastName("Franklin");
+
+		pet = new Pet();
 		pet.setId(TEST_PET_ID);
-		given(this.owners.findById(TEST_OWNER_ID)).willReturn(Optional.of(owner));
+		pet.setName("Leo");
+		pet.setBirthDate(LocalDate.of(2000, 1, 1));
+		pet.setType(new PetType()); // Assuming PetType exists
+		george.addPet(pet);
+
+		vet1 = new Vet();
+		vet1.setId(1);
+		vet1.setFirstName("James");
+		vet1.setLastName("Carter");
+
+		visit1 = new Visit();
+		visit1.setId(1);
+		visit1.setDate(LocalDate.now().plusDays(1));
+		visit1.setDescription("Routine checkup");
+		visit1.setPet(pet);
+		visit1.setVet(vet1);
+
+		given(this.owners.findById(TEST_OWNER_ID)).willReturn(Optional.of(george));
+		given(this.visitService.findVisits(any(), any(), any(), any(), any(), any(), any(Pageable.class)))
+				.willReturn(new PageImpl<>(Collections.singletonList(visit1)));
+		given(this.vets.findAll()).willReturn(Collections.singletonList(vet1));
 	}
 
 	@Test
@@ -76,7 +120,7 @@ class VisitControllerTests {
 	void processNewVisitFormSuccess() throws Exception {
 		mockMvc
 			.perform(post("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, TEST_PET_ID)
-				.param("name", "George")
+				.param("name", "George") // This param is not on Visit, but was in original test. Keeping for consistency.
 				.param("date", LocalDate.now().plusDays(1).toString())
 				.param("description", "Visit Description"))
 			.andExpect(status().is3xxRedirection())
@@ -87,7 +131,7 @@ class VisitControllerTests {
 	void processNewVisitFormHasErrors() throws Exception {
 		mockMvc
 			.perform(post("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, TEST_PET_ID).param("name",
-					"George"))
+					"George")) // This param is not on Visit, but was in original test. Keeping for consistency.
 			.andExpect(model().attributeHasErrors("visit"))
 			.andExpect(status().isOk())
 			.andExpect(view().name("pets/createOrUpdateVisitForm"));
@@ -97,7 +141,7 @@ class VisitControllerTests {
 	void processNewVisitFormHasErrorsWhenVisitDateIsNotInFuture() throws Exception {
 		mockMvc
 			.perform(post("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, TEST_PET_ID)
-				.param("name", "George")
+				.param("name", "George") // This param is not on Visit, but was in original test. Keeping for consistency.
 				.param("date", LocalDate.now().toString())
 				.param("description", "Visit Description"))
 			.andExpect(model().attributeHasFieldErrors("visit", "date"))
@@ -106,4 +150,58 @@ class VisitControllerTests {
 			.andExpect(view().name("pets/createOrUpdateVisitForm"));
 	}
 
+	// New tests for filtered visits API
+	@Test
+	void getFilteredVisitsWithoutParams() throws Exception {
+		mockMvc.perform(get("/api/visits"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.content[0].id").value(visit1.getId()))
+				.andExpect(jsonPath("$.content[0].description").value(visit1.getDescription()));
+	}
+
+	@Test
+	void getFilteredVisitsByOwnerId() throws Exception {
+		mockMvc.perform(get("/api/visits").param("ownerId", String.valueOf(TEST_OWNER_ID)))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.content[0].id").value(visit1.getId()));
+	}
+
+	@Test
+	void getFilteredVisitsByPetId() throws Exception {
+		mockMvc.perform(get("/api/visits").param("petId", String.valueOf(TEST_PET_ID)))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.content[0].id").value(visit1.getId()));
+	}
+
+	@Test
+	void getFilteredVisitsByVetId() throws Exception {
+		mockMvc.perform(get("/api/visits").param("vetId", String.valueOf(vet1.getId())))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.content[0].id").value(visit1.getId()));
+	}
+
+	@Test
+	void getFilteredVisitsByDateRange() throws Exception {
+		LocalDate futureDate = LocalDate.now().plusDays(2);
+		mockMvc.perform(get("/api/visits")
+						.param("startDate", LocalDate.now().toString())
+						.param("endDate", futureDate.toString()))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.content[0].id").value(visit1.getId()));
+	}
+
+	@Test
+	void getFilteredVisitsByDescription() throws Exception {
+		mockMvc.perform(get("/api/visits").param("description", "checkup"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.content[0].id").value(visit1.getId()));
+	}
+
+	@Test
+	void getAllVetsApi() throws Exception {
+		mockMvc.perform(get("/api/vets"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$[0].id").value(vet1.getId()))
+				.andExpect(jsonPath("$[0].firstName").value(vet1.getFirstName()));
+	}
 }
