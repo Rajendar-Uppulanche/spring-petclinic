@@ -30,6 +30,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -68,7 +69,7 @@ class OwnerControllerTests {
 	private MockMvc mockMvc;
 
 	@MockitoBean
-	private OwnerRepository owners;
+	private OwnerService ownerService; // New: Mock the service layer
 
 	private Owner george() {
 		Owner george = new Owner();
@@ -89,18 +90,56 @@ class OwnerControllerTests {
 		return george;
 	}
 
+	// Helper to create OwnerDetails for mocking
+	private OwnerDetails createOwnerDetails(Owner owner) {
+		OwnerDetails ownerDetails = new OwnerDetails();
+		ownerDetails.setId(owner.getId());
+		ownerDetails.setFirstName(owner.getFirstName());
+		ownerDetails.setLastName(owner.getLastName());
+		ownerDetails.setAddress(owner.getAddress());
+		ownerDetails.setCity(owner.getCity());
+		ownerDetails.setTelephone(owner.getTelephone());
+
+		List<PetDetails> petDetailsList = new ArrayList<>();
+		for (Pet pet : owner.getPets()) {
+			PetDetails petDetails = new PetDetails();
+			petDetails.setId(pet.getId());
+			petDetails.setName(pet.getName());
+			petDetails.setBirthDate(pet.getBirthDate());
+			petDetails.setType(pet.getType());
+			petDetails.setOwner(pet.getOwner());
+			petDetails.setVisits(pet.getVisits()); // Copy visits for count
+
+			int visitCount = pet.getVisits().size();
+			if (visitCount == 0) {
+				petDetails.setFormattedVisitCount("No visits");
+			} else if (visitCount == 1) {
+				petDetails.setFormattedVisitCount("1 visit");
+			} else {
+				petDetails.setFormattedVisitCount(visitCount + " visits");
+			}
+			petDetailsList.add(petDetails);
+		}
+		ownerDetails.setPetDetails(petDetailsList);
+		return ownerDetails;
+	}
+
+
 	@BeforeEach
 	void setup() {
-
 		Owner george = george();
-		given(this.owners.findByLastNameStartingWith(eq("Franklin"), any(Pageable.class)))
-			.willReturn(new PageImpl<>(List.of(george)));
-
-		given(this.owners.findById(TEST_OWNER_ID)).willReturn(Optional.of(george));
 		Visit visit = new Visit();
 		visit.setDate(LocalDate.now());
-		george.getPet("Max").getVisits().add(visit);
+		george.getPet("Max").getVisits().add(visit); // Add a visit to Max
 
+		OwnerDetails georgeDetails = createOwnerDetails(george);
+
+		// Mock service calls
+		given(this.ownerService.findByLastNameStartingWith(eq("Franklin"), any(Pageable.class)))
+			.willReturn(new PageImpl<>(List.of(george))); // Still returns Owner for find form
+
+		given(this.ownerService.findById(TEST_OWNER_ID)).willReturn(george); // For edit form
+		given(this.ownerService.findOwnerDetailsById(TEST_OWNER_ID)).willReturn(georgeDetails); // For showOwner
 	}
 
 	@Test
@@ -120,6 +159,7 @@ class OwnerControllerTests {
 				.param("city", "London")
 				.param("telephone", "1316761638"))
 			.andExpect(status().is3xxRedirection());
+		verify(ownerService).saveOwner(any(Owner.class)); // Verify service call
 	}
 
 	@Test
@@ -144,14 +184,14 @@ class OwnerControllerTests {
 	@Test
 	void processFindFormSuccess() throws Exception {
 		Page<Owner> tasks = new PageImpl<>(List.of(george(), new Owner()));
-		when(this.owners.findByLastNameStartingWith(anyString(), any(Pageable.class))).thenReturn(tasks);
+		when(this.ownerService.findByLastNameStartingWith(anyString(), any(Pageable.class))).thenReturn(tasks); // Use service
 		mockMvc.perform(get("/owners?page=1")).andExpect(status().isOk()).andExpect(view().name("owners/ownersList"));
 	}
 
 	@Test
 	void processFindFormByLastName() throws Exception {
 		Page<Owner> tasks = new PageImpl<>(List.of(george()));
-		when(this.owners.findByLastNameStartingWith(eq("Franklin"), any(Pageable.class))).thenReturn(tasks);
+		when(this.ownerService.findByLastNameStartingWith(eq("Franklin"), any(Pageable.class))).thenReturn(tasks); // Use service
 		mockMvc.perform(get("/owners?page=1").param("lastName", "Franklin"))
 			.andExpect(status().is3xxRedirection())
 			.andExpect(view().name("redirect:/owners/" + TEST_OWNER_ID));
@@ -160,7 +200,7 @@ class OwnerControllerTests {
 	@Test
 	void processFindFormIgnoresSurroundingWhitespace() throws Exception {
 		Page<Owner> tasks = new PageImpl<>(List.of(george()));
-		when(this.owners.findByLastNameStartingWith(eq("Franklin"), any(Pageable.class))).thenReturn(tasks);
+		when(this.ownerService.findByLastNameStartingWith(eq("Franklin"), any(Pageable.class))).thenReturn(tasks); // Use service
 
 		for (String lastName : List.of(" Franklin", "Franklin ", " Franklin ")) {
 			mockMvc.perform(get("/owners?page=1").param("lastName", lastName))
@@ -168,25 +208,25 @@ class OwnerControllerTests {
 				.andExpect(view().name("redirect:/owners/" + TEST_OWNER_ID));
 		}
 
-		verify(this.owners, times(3)).findByLastNameStartingWith(eq("Franklin"), any(Pageable.class));
+		verify(this.ownerService, times(3)).findByLastNameStartingWith(eq("Franklin"), any(Pageable.class)); // Verify service call
 	}
 
 	@Test
 	void processFindFormWithWhitespaceOnlyLastNameReturnsAllOwners() throws Exception {
 		Page<Owner> tasks = new PageImpl<>(List.of(george(), new Owner()));
-		when(this.owners.findByLastNameStartingWith(eq(""), any(Pageable.class))).thenReturn(tasks);
+		when(this.ownerService.findByLastNameStartingWith(eq(""), any(Pageable.class))).thenReturn(tasks); // Use service
 
 		mockMvc.perform(get("/owners?page=1").param("lastName", "   "))
 			.andExpect(status().isOk())
 			.andExpect(view().name("owners/ownersList"));
 
-		verify(this.owners).findByLastNameStartingWith(eq(""), any(Pageable.class));
+		verify(this.ownerService).findByLastNameStartingWith(eq(""), any(Pageable.class)); // Verify service call
 	}
 
 	@Test
 	void processFindFormNoOwnersFound() throws Exception {
 		Page<Owner> tasks = new PageImpl<>(List.of());
-		when(this.owners.findByLastNameStartingWith(eq("Unknown Surname"), any(Pageable.class))).thenReturn(tasks);
+		when(this.ownerService.findByLastNameStartingWith(eq("Unknown Surname"), any(Pageable.class))).thenReturn(tasks); // Use service
 		mockMvc.perform(get("/owners?page=1").param("lastName", "Unknown Surname"))
 			.andExpect(status().isOk())
 			.andExpect(model().attributeHasFieldErrors("owner", "lastName"))
@@ -218,6 +258,7 @@ class OwnerControllerTests {
 				.param("telephone", "1616291589"))
 			.andExpect(status().is3xxRedirection())
 			.andExpect(view().name("redirect:/owners/{ownerId}"));
+		verify(ownerService).saveOwner(any(Owner.class)); // Verify service call
 	}
 
 	@Test
@@ -225,6 +266,7 @@ class OwnerControllerTests {
 		mockMvc.perform(post("/owners/{ownerId}/edit", TEST_OWNER_ID))
 			.andExpect(status().is3xxRedirection())
 			.andExpect(view().name("redirect:/owners/{ownerId}"));
+		verify(ownerService).saveOwner(any(Owner.class)); // Verify service call
 	}
 
 	@Test
@@ -250,9 +292,9 @@ class OwnerControllerTests {
 			.andExpect(model().attribute("owner", hasProperty("address", is("110 W. Liberty St."))))
 			.andExpect(model().attribute("owner", hasProperty("city", is("Madison"))))
 			.andExpect(model().attribute("owner", hasProperty("telephone", is("6085551023"))))
-			.andExpect(model().attribute("owner", hasProperty("pets", not(empty()))))
+			.andExpect(model().attribute("owner", hasProperty("petDetails", not(empty())))) // Check petDetails
 			.andExpect(model().attribute("owner",
-					hasProperty("pets", hasItem(hasProperty("visits", hasSize(greaterThan(0)))))))
+					hasProperty("petDetails", hasItem(hasProperty("formattedVisitCount", is("1 visit")))))) // Check formattedVisitCount
 			.andExpect(view().name("owners/ownerDetails"));
 	}
 
@@ -268,7 +310,8 @@ class OwnerControllerTests {
 		owner.setCity("New York");
 		owner.setTelephone("0123456789");
 
-		when(owners.findById(pathOwnerId)).thenReturn(Optional.of(owner));
+		// Mock findById for the service
+		when(ownerService.findById(pathOwnerId)).thenReturn(owner); // Service returns the owner with mismatched ID
 
 		mockMvc.perform(MockMvcRequestBuilders.post("/owners/{ownerId}/edit", pathOwnerId).flashAttr("owner", owner))
 			.andExpect(status().is3xxRedirection())
