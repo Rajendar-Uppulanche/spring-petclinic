@@ -16,6 +16,7 @@
 package org.springframework.samples.petclinic.owner;
 
 import java.time.LocalDate;
+import java.util.List; 
 import java.util.Map;
 import java.util.Optional;
 
@@ -30,6 +31,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 
 import jakarta.validation.Valid;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.samples.petclinic.vet.Vet; 
+import org.springframework.samples.petclinic.vet.VetRepository; 
 
 /**
  * @author Juergen Hoeller
@@ -43,9 +46,11 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 class VisitController {
 
 	private final OwnerRepository owners;
+	private final VetRepository vets; 
 
-	public VisitController(OwnerRepository owners) {
+	public VisitController(OwnerRepository owners, VetRepository vets) { 
 		this.owners = owners;
+		this.vets = vets; 
 	}
 
 	@InitBinder
@@ -77,12 +82,18 @@ class VisitController {
 
 		Visit visit = new Visit();
 		pet.addVisit(visit);
+		visit.setPet(pet); 
 		return visit;
 	}
 
 	@ModelAttribute("minVisitDate")
 	public LocalDate minVisitDate() {
 		return LocalDate.now().plusDays(1);
+	}
+
+	@ModelAttribute("vets") 
+	public List<Vet> populateVets() {
+		return this.vets.findAll();
 	}
 
 	// Spring MVC calls method loadPetWithVisit(...) before initNewVisitForm is
@@ -105,7 +116,9 @@ class VisitController {
 			return "pets/createOrUpdateVisitForm";
 		}
 
-		owner.addVisit(petId, visit);
+		// The visit object is already associated with the pet in loadPetWithVisit
+		// and the pet is set on the visit object.
+		// Saving the owner should cascade and persist the new visit.
 		this.owners.save(owner);
 		redirectAttributes.addFlashAttribute("message", "Your visit has been booked");
 		return "redirect:/owners/{ownerId}";
