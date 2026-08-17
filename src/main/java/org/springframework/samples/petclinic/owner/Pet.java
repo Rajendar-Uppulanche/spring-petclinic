@@ -15,14 +15,6 @@
  */
 package org.springframework.samples.petclinic.owner;
 
-import java.time.LocalDate;
-import java.util.Collection;
-import java.util.LinkedHashSet;
-import java.util.Set;
-
-import org.springframework.format.annotation.DateTimeFormat;
-import org.springframework.samples.petclinic.model.NamedEntity;
-
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -30,22 +22,34 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
-import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
+import jakarta.persistence.Temporal;
+import jakarta.persistence.TemporalType;
+import jakarta.validation.constraints.NotBlank;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.samples.petclinic.model.NamedEntity;
+import org.springframework.samples.petclinic.pet.PetType;
+
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
 
 /**
- * Simple business object representing a pet.
+ * Simple JavaBean domain object representing a pet.
  *
  * @author Ken Krebs
  * @author Juergen Hoeller
  * @author Sam Brannen
- * @author Wick Dynex
+ * @author Isy
  */
 @Entity
 @Table(name = "pets")
 public class Pet extends NamedEntity {
 
-	@Column
+	@Column(name = "birth_date")
 	@DateTimeFormat(pattern = "yyyy-MM-dd")
 	private LocalDate birthDate;
 
@@ -53,17 +57,19 @@ public class Pet extends NamedEntity {
 	@JoinColumn(name = "type_id")
 	private PetType type;
 
-	@OneToMany(cascade = CascadeType.ALL, fetch = FetchType.EAGER)
-	@JoinColumn(name = "pet_id")
-	@OrderBy("date ASC")
-	private final Set<Visit> visits = new LinkedHashSet<>();
+	@ManyToOne
+	@JoinColumn(name = "owner_id")
+	private Owner owner;
 
-	public void setBirthDate(LocalDate birthDate) {
-		this.birthDate = birthDate;
-	}
+	@OneToMany(cascade = CascadeType.ALL, mappedBy = "pet", fetch = FetchType.EAGER)
+	private Set<Visit> visits;
 
 	public LocalDate getBirthDate() {
 		return this.birthDate;
+	}
+
+	public void setBirthDate(LocalDate birthDate) {
+		this.birthDate = birthDate;
 	}
 
 	public PetType getType() {
@@ -74,12 +80,33 @@ public class Pet extends NamedEntity {
 		this.type = type;
 	}
 
-	public Collection<Visit> getVisits() {
+	public Owner getOwner() {
+		return this.owner;
+	}
+
+	public void setOwner(Owner owner) {
+		this.owner = owner;
+	}
+
+	protected Set<Visit> getVisitsInternal() {
+		if (this.visits == null) {
+			this.visits = new LinkedHashSet<>();
+		}
 		return this.visits;
 	}
 
+	protected void setVisitsInternal(Set<Visit> visits) {
+		this.visits = visits;
+	}
+
+	public List<Visit> getVisits() {
+		List<Visit> sortedVisits = new ArrayList<>(getVisitsInternal());
+		return Collections.unmodifiableList(sortedVisits);
+	}
+
 	public void addVisit(Visit visit) {
-		getVisits().add(visit);
+		getVisitsInternal().add(visit);
+		visit.setPet(this);
 	}
 
 }
