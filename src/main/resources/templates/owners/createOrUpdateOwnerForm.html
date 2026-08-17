@@ -3,8 +3,28 @@
 <html xmlns:th="https://www.thymeleaf.org" th:replace="~{fragments/layout :: layout (~{::body},'owners')}">
 
 <body>
+  <style>
+    /* NFR-006: Header Styling */
+    .registration-header {
+      color: #1A3C6E;
+      font-size: 22px;
+      font-weight: bold;
+    }
 
-  <h2 th:text="#{owner}">Owner</h2>
+    /* NFR-007: Submit Button Styling */
+    /* Using !important to ensure override of existing Bootstrap styles, if necessary. */
+    /* A more robust solution would involve custom CSS files and proper cascade management. */
+    .submit-button {
+      background-color: #00B140 !important;
+      border-color: #00B140 !important; /* Also change border to match */
+    }
+    .submit-button:hover {
+      background-color: #009933 !important; /* Slightly darker on hover */
+      border-color: #009933 !important;
+    }
+  </style>
+
+  <h2 th:text="#{owner}" class="registration-header">Owner</h2>
   <form th:object="${owner}" class="form-horizontal" id="add-owner-form" method="post">
     <div class="form-group has-feedback">
       <input th:replace="~{fragments/inputField :: input (#{firstName}, 'firstName', 'text')}" />
@@ -15,7 +35,7 @@
     </div>
     <div class="form-group">
       <div class="col-sm-offset-2 col-sm-10">
-        <button th:with="text=${owner['new']} ? #{addOwner} : #{updateOwner}" class="btn btn-primary" type="submit"
+        <button th:with="text=${owner['new']} ? #{addOwner} : #{updateOwner}" class="btn btn-primary submit-button" type="submit"
           th:text="${text}">Add Owner</button>
       </div>
     </div>
