@@ -1,0 +1,31 @@
+<nav class="navbar navbar-expand-lg navbar-dark bg-success">
+    <a class="navbar-brand" href="/">PetClinic</a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav"
+            aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav">
+            <li class="nav-item" th:classappend="${#strings.startsWith(#httpServletRequest.requestURI, '/owners')} ? 'active' : ''">
+                <a class="nav-link" th:href="@{/owners/find}">
+                    <i class="fa fa-search"></i> Find Owners
+                </a>
+            </li>
+            <li class="nav-item" th:classappend="${#strings.startsWith(#httpServletRequest.requestURI, '/vets')} ? 'active' : ''">
+                <a class="nav-link" th:href="@{/vets.html}">
+                    <i class="fa fa-th-list"></i> Veterinarians
+                </a>
+            </li>
+            <li class="nav-item" th:classappend="${#strings.startsWith(#httpServletRequest.requestURI, '/appointments')} ? 'active' : ''">
+                <a class="nav-link" th:href="@{/appointments}">
+                    <i class="fa fa-calendar"></i> Appointments
+                </a>
+            </li>
+            <li class="nav-item" th:classappend="${#strings.startsWith(#httpServletRequest.requestURI, '/oups')} ? 'active' : ''">
+                <a class="nav-link" th:href="@{/oups}">
+                    <i class="fa fa-warning"></i> Error
+                </a>
+            </li>
+        </ul>
+    </div>
+</nav>
