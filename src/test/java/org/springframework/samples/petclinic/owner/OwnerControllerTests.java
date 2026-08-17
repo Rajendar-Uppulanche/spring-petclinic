@@ -19,13 +19,12 @@ package org.springframework.samples.petclinic.owner;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledInNativeImage;
+import org.junit.jupiter.api.condition.DisabledInAotMode;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
-import org.springframework.test.context.aot.DisabledInAotMode;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
@@ -78,29 +77,41 @@ class OwnerControllerTests {
 		george.setAddress("110 W. Liberty St.");
 		george.setCity("Madison");
 		george.setTelephone("6085551023");
+
+		// Pet with visits
 		Pet max = new Pet();
 		PetType dog = new PetType();
 		dog.setName("dog");
 		max.setType(dog);
 		max.setName("Max");
 		max.setBirthDate(LocalDate.now());
-		george.addPet(max);
 		max.setId(1);
+		Visit visit = new Visit();
+		visit.setDate(LocalDate.now());
+		max.addVisit(visit); // Add visit to Max
+		george.addPet(max);
+
+		// Pet without visits
+		Pet fluffy = new Pet();
+		PetType cat = new PetType();
+		cat.setName("cat");
+		fluffy.setType(cat);
+		fluffy.setName("Fluffy");
+		fluffy.setBirthDate(LocalDate.now().minusYears(1));
+		fluffy.setId(2);
+		// No visits added to Fluffy
+		george.addPet(fluffy);
+
 		return george;
 	}
 
 	@BeforeEach
 	void setup() {
-
 		Owner george = george();
 		given(this.owners.findByLastNameStartingWith(eq("Franklin"), any(Pageable.class)))
 			.willReturn(new PageImpl<>(List.of(george)));
 
 		given(this.owners.findById(TEST_OWNER_ID)).willReturn(Optional.of(george));
-		Visit visit = new Visit();
-		visit.setDate(LocalDate.now());
-		george.getPet("Max").getVisits().add(visit);
-
 	}
 
 	@Test
@@ -253,6 +264,8 @@ class OwnerControllerTests {
 			.andExpect(model().attribute("owner", hasProperty("pets", not(empty()))))
 			.andExpect(model().attribute("owner",
 					hasProperty("pets", hasItem(hasProperty("visits", hasSize(greaterThan(0)))))))
+			.andExpect(content().string(org.hamcrest.Matchers.containsString("Max <span class=\"badge badge-pill badge-info\">1 visit(s)</span>")))
+			.andExpect(content().string(org.hamcrest.Matchers.containsString("Fluffy <span class=\"badge badge-pill badge-secondary\">No visits</span>")))
 			.andExpect(view().name("owners/ownerDetails"));
 	}
 
