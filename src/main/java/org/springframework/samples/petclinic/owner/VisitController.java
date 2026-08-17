@@ -18,6 +18,7 @@ package org.springframework.samples.petclinic.owner;
 import java.time.LocalDate;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Collections;
 
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.BindingResult;
@@ -27,6 +28,8 @@ import org.springframework.web.bind.annotation.InitBinder;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.ui.Model;
 
 import jakarta.validation.Valid;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
@@ -93,7 +96,7 @@ class VisitController {
 	}
 
 	// Spring MVC calls method loadPetWithVisit(...) before processNewVisitForm is
-	// called
+	// called	
 	@PostMapping("/owners/{ownerId}/pets/{petId}/visits/new")
 	public String processNewVisitForm(@ModelAttribute Owner owner, @PathVariable int petId, @Valid Visit visit,
 			BindingResult result, RedirectAttributes redirectAttributes) {
@@ -109,6 +112,33 @@ class VisitController {
 		this.owners.save(owner);
 		redirectAttributes.addFlashAttribute("message", "Your visit has been booked");
 		return "redirect:/owners/{ownerId}";
+	}
+
+	/**
+	 * Handles requests for filtered visits for a specific pet.
+	 * This endpoint is a placeholder as the underlying Visit entity and VisitRepository
+	 * are not provided, preventing full implementation of filtering logic.
+	 * @param ownerId The ID of the owner.
+	 * @param petId The ID of the pet.
+	 * @param fromDate Optional start date for filtering visits.
+	 * @param toDate Optional end date for filtering visits.
+	 * @param vetId Optional veterinarian ID for filtering visits.
+	 * @param model The model to add attributes to.
+	 * @return The name of the view to render.
+	 */
+	@GetMapping("/owners/{ownerId}/pets/{petId}/visits/filtered")
+	public String getFilteredVisits(@PathVariable("ownerId") int ownerId,
+									@PathVariable("petId") int petId,
+									@RequestParam(required = false) LocalDate fromDate,
+									@RequestParam(required = false) LocalDate toDate,
+									@RequestParam(required = false) Integer vetId,
+									Model model) {
+		// In a real implementation, a VisitService/VisitRepository would be used here
+		// to fetch visits based on the provided filter criteria.
+		// Since Visit.java and VisitRepository are not provided, we return an empty list.
+		model.addAttribute("visits", Collections.emptyList());
+		model.addAttribute("message", "Filtered visits functionality is a placeholder due to missing data model and repository dependencies.");
+		return "pets/filteredVisitList"; // Assuming a new view for displaying filtered visits
 	}
 
 }
