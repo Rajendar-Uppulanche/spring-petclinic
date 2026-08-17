@@ -31,6 +31,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
+import jakarta.persistence.Index;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.NotBlank;
 
@@ -45,7 +46,11 @@ import jakarta.validation.constraints.NotBlank;
  * @author Wick Dynex
  */
 @Entity
-@Table(name = "owners")
+@Table(name = "owners", indexes = {
+    @Index(name = "idx_owner_last_name", columnList = "last_name"),
+    @Index(name = "idx_owner_first_name", columnList = "first_name"),
+    @Index(name = "idx_owner_telephone", columnList = "telephone")
+})
 public class Owner extends Person {
 
 	@Column
