@@ -27,12 +27,16 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledInNativeImage;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.samples.petclinic.vet.Vet;
+import org.springframework.samples.petclinic.vet.VetRepository;
 import org.springframework.test.context.aot.DisabledInAotMode;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -49,12 +53,16 @@ class VisitControllerTests {
 	private static final int TEST_OWNER_ID = 1;
 
 	private static final int TEST_PET_ID = 1;
+	private static final int TEST_VET_ID = 1;
 
 	@Autowired
 	private MockMvc mockMvc;
 
 	@MockitoBean
 	private OwnerRepository owners;
+
+	@MockitoBean
+	private VetRepository vets;
 
 	@BeforeEach
 	void init() {
@@ -63,13 +71,23 @@ class VisitControllerTests {
 		owner.addPet(pet);
 		pet.setId(TEST_PET_ID);
 		given(this.owners.findById(TEST_OWNER_ID)).willReturn(Optional.of(owner));
+
+		List<Vet> vetList = new ArrayList<>();
+		Vet vet = new Vet();
+		vet.setId(TEST_VET_ID);
+		vet.setFirstName("James");
+		vet.setLastName("Carter");
+		vetList.add(vet);
+		given(this.vets.findAll()).willReturn(vetList);
 	}
 
 	@Test
 	void initNewVisitForm() throws Exception {
 		mockMvc.perform(get("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, TEST_PET_ID))
 			.andExpect(status().isOk())
-			.andExpect(view().name("pets/createOrUpdateVisitForm"));
+			.andExpect(view().name("pets/createOrUpdateVisitForm"))
+			.andExpect(model().attributeExists("vets"))
+			.andExpect(model().attributeExists("visitStatuses"));
 	}
 
 	@Test
@@ -78,7 +96,9 @@ class VisitControllerTests {
 			.perform(post("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, TEST_PET_ID)
 				.param("name", "George")
 				.param("date", LocalDate.now().plusDays(1).toString())
-				.param("description", "Visit Description"))
+				.param("description", "Visit Description")
+				.param("veterinarian.id", String.valueOf(TEST_VET_ID))
+				.param("status", VisitStatus.SCHEDULED.name()))
 			.andExpect(status().is3xxRedirection())
 			.andExpect(view().name("redirect:/owners/{ownerId}"));
 	}
@@ -99,7 +119,9 @@ class VisitControllerTests {
 			.perform(post("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, TEST_PET_ID)
 				.param("name", "George")
 				.param("date", LocalDate.now().toString())
-				.param("description", "Visit Description"))
+				.param("description", "Visit Description")
+				.param("veterinarian.id", String.valueOf(TEST_VET_ID))
+				.param("status", VisitStatus.SCHEDULED.name()))
 			.andExpect(model().attributeHasFieldErrors("visit", "date"))
 			.andExpect(model().attributeHasFieldErrorCode("visit", "date", "typeMismatch.visitDate"))
 			.andExpect(status().isOk())
