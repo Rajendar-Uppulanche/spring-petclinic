@@ -22,6 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.springframework.dao.DataIntegrityViolationException;
 import java.time.LocalDate;
 import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
@@ -93,6 +94,28 @@ class ClinicServiceTests {
 
 		owners = this.owners.findByLastNameStartingWith("Daviss", pageable);
 		assertThat(owners).isEmpty();
+	}
+
+	@Test
+	void shouldFindOwnersByLastNameContainingIgnoreCaseAndOrdered() {
+		// Test case-insensitivity and partial match
+		Page<Owner> ownersPage = this.owners.findByLastNameContainingIgnoreCaseOrderByLastNameAsc("frank", pageable);
+		assertThat(ownersPage).hasSize(1);
+		assertThat(ownersPage.getContent().get(0).getLastName()).isEqualTo("Franklin");
+
+		ownersPage = this.owners.findByLastNameContainingIgnoreCaseOrderByLastNameAsc("davis", pageable);
+		assertThat(ownersPage).hasSize(2);
+		assertThat(ownersPage.getContent().get(0).getLastName()).isEqualTo("Davis");
+
+		// Test ordering (assuming default data has multiple owners with 'a' in last name)
+		ownersPage = this.owners.findByLastNameContainingIgnoreCaseOrderByLastNameAsc("a", Pageable.unpaged());
+		List<Owner> foundOwners = ownersPage.getContent();
+		assertThat(foundOwners).extracting(Owner::getLastName)
+			.containsExactly("Coleman", "Davis", "Davis", "Franklin", "Jenkins", "McTavish");
+
+		// Test no results
+		ownersPage = this.owners.findByLastNameContainingIgnoreCaseOrderByLastNameAsc("xyz", pageable);
+		assertThat(ownersPage).isEmpty();
 	}
 
 	@Test
