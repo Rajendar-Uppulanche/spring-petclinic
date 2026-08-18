@@ -1,0 +1,94 @@
+/* General styles for PetClinic */
+body {
+    padding-top: 60px;
+    padding-bottom: 40px;
+}
+
+.container {
+    max-width: 960px;
+}
+
+/* Custom styles for the visit count badge */
+.visit-count-badge {
+    margin-right: 5px; /* Space between badge and button */
+    padding: .4em .6em;
+    font-size: 90%;
+    font-weight: 700;
+    line-height: 1;
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: baseline;
+    border-radius: .25rem;
+    display: inline-block; /* Ensure it behaves like a block for margin/padding */
+}
+
+/* Bootstrap badge colors for context, if not already defined */
+.badge.bg-secondary {
+    background-color: #6c757d !important; /* Grey for no visits */
+    color: #fff;
+}
+
+.badge.bg-info {
+    background-color: #0dcaf0 !important; /* Light blue for 1 visit */
+    color: #fff;
+}
+
+.badge.bg-primary {
+    background-color: #0d6efd !important; /* Blue for multiple visits */
+    color: #fff;
+}
+
+/* Additional styling for forms, tables, etc. if needed */
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.table {
+    width: 100%;
+    margin-bottom: 1rem;
+    color: #212529;
+}
+
+.table th,
+.table td {
+    padding: .75rem;
+    vertical-align: top;
+    border-top: 1px solid #dee2e6;
+}
+
+.table thead th {
+    vertical-align: bottom;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.btn {
+    display: inline-block;
+    font-weight: 400;
+    color: #212529;
+    text-align: center;
+    vertical-align: middle;
+    cursor: pointer;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    background-color: transparent;
+    border: 1px solid transparent;
+    padding: .375rem .75rem;
+    font-size: 1rem;
+    line-height: 1.5;
+    border-radius: .25rem;
+    transition: color .15s ease-in-out,background-color .15s ease-in-out,border-color .15s ease-in-out,box-shadow .15s ease-in-out;
+}
+
+.btn-primary {
+    color: #fff;
+    background-color: #007bff;
+    border-color: #007bff;
+}
+
+.btn-info {
+    color: #fff;
+    background-color: #17a2b8;
+    border-color: #17a2b8;
+}
