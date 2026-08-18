@@ -31,7 +31,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.samples.petclinic.vet.VetRepository;
 import org.springframework.web.client.RestTemplate;
 
-@SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT, properties = "logging.level.sql=DEBUG")
+@SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT, properties = { "logging.level.sql=DEBUG", "spring.threads.virtual.enabled=true" })
 public class PetClinicIntegrationTests {
 
 	@LocalServerPort
@@ -61,6 +61,14 @@ public class PetClinicIntegrationTests {
 		RestTemplate template = builder.baseUri("http://localhost:" + port).build();
 		ResponseEntity<String> result = template.exchange(RequestEntity.get("/owners?lastName=").build(), String.class);
 		assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
+	}
+
+	@Test
+	void actuatorPrometheusEndpointAccessible() {
+		RestTemplate template = builder.baseUri("http://localhost:" + port).build();
+		ResponseEntity<String> result = template.exchange(RequestEntity.get("/actuator/prometheus").build(), String.class);
+		assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
+		assertThat(result.getBody()).contains("# HELP");
 	}
 
 	public static void main(String[] args) {
