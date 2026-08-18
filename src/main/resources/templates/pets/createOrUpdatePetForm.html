@@ -1,34 +1,84 @@
-<!DOCTYPE html>
+<html xmlns:th="https://www.thymeleaf.org" xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/default}">
 
-<html xmlns:th="https://www.thymeleaf.org" th:replace="~{fragments/layout :: layout (~{::body},'owners')}">
+<head>
+    <title>Pet</title>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const birthDateInput = document.getElementById('birthDate');
+            const birthDateError = document.getElementById('birthDateError');
+            const form = document.querySelector('form');
+
+            if (birthDateInput && birthDateError && form) {
+                birthDateInput.addEventListener('change', validateBirthDate);
+                birthDateInput.addEventListener('keyup', validateBirthDate);
+                form.addEventListener('submit', function(event) {
+                    if (!validateBirthDate()) {
+                        event.preventDefault();
+                    }
+                });
+            }
+
+            function validateBirthDate() {
+                const selectedDate = new Date(birthDateInput.value);
+                const today = new Date();
+                today.setHours(0, 0, 0, 0); // Normalize today's date to compare only date part
+
+                if (birthDateInput.value === '') {
+                    birthDateError.textContent = 'Birth date is required';
+                    birthDateError.style.display = 'block';
+                    birthDateInput.classList.add('is-invalid');
+                    return false;
+                } else if (selectedDate > today) {
+                    birthDateError.textContent = 'Birth date cannot be in the future';
+                    birthDateError.style.display = 'block';
+                    birthDateInput.classList.add('is-invalid');
+                    return false;
+                } else {
+                    birthDateError.textContent = '';
+                    birthDateError.style.display = 'none';
+                    birthDateInput.classList.remove('is-invalid');
+                    return true;
+                }
+            }
+        });
+    </script>
+</head>
 
 <body>
 
-  <h2>
-    <th:block th:if="${pet['new']}" th:text="#{new}">New </th:block>
-    <span th:text="#{pet}">Pet</span>
-  </h2>
-  <form th:object="${pet}" class="form-horizontal" method="post">
-    <input type="hidden" name="id" th:value="*{id}" />
-    <div class="form-group has-feedback">
-      <div class="form-group">
-        <label class="col-sm-2 control-label" th:text="#{owner}">Owner</label>
-        <div class="col-sm-10">
-          <span th:text="${owner?.firstName + ' ' + owner?.lastName}" />
+<div layout:fragment="content">
+    <h2>
+        <th:block th:if="${pet['new']}">New </th:block>
+        Pet
+    </h2>
+    <form th:object="${pet}" class="form-horizontal" id="add-pet-form" method="post">
+        <div class="form-group has-feedback">
+            <div class="form-group">
+                <label class="col-sm-2 control-label">Owner</label>
+                <div class="col-sm-10">
+                    <span th:text="${owner.firstName + ' ' + owner.lastName}" class="form-control"/>
+                </div>
+            </div>
+            <input
+                    th:replace="fragments/inputField :: input('Name', 'name', 'text')"/>
+            <input
+                    th:replace="fragments/inputField :: input('Birth Date', 'birthDate', 'date')" id="birthDate"/>
+            <span id="birthDateError" class="error-message" style="display: none;"></span>
+            <input
+                    th:replace="fragments/selectField :: select('Type', 'type', types)"/>
         </div>
-      </div>
-      <input th:replace="~{fragments/inputField :: input ('Name', 'name', 'text')}" />
-      <input th:replace="~{fragments/inputField :: input ('Birth Date', 'birthDate', 'date')}" />
-      <input th:replace="~{fragments/selectField :: select ('Type', 'type', ${types})}" />
-    </div>
-    <div class="form-group">
-      <div class="col-sm-offset-2 col-sm-10">
-        <button th:with="text=${pet['new']} ? 'Add Pet' : 'Update Pet'" class="btn btn-primary" type="submit"
-          th:text="${text}">Add Pet</button>
-      </div>
-    </div>
-  </form>
+        <div class="form-group">
+            <div class="col-sm-offset-2 col-sm-10">
+                <button
+                        th:with="text=${pet['new']} ? 'Add Pet' : 'Update Pet'"
+                        class="btn btn-default" type="submit" th:text="${text}">
+                    Add Pet
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
 
 </body>
-
 </html>
