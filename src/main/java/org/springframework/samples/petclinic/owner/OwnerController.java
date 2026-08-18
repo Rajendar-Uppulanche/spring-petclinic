@@ -22,6 +22,7 @@ import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -132,8 +133,9 @@ class OwnerController {
 
 	private Page<Owner> findPaginatedForOwnersLastName(int page, String lastname) {
 		int pageSize = 5;
-		Pageable pageable = PageRequest.of(page - 1, pageSize);
-		return owners.findByLastNameStartingWith(lastname, pageable);
+		// Sort results alphabetically by last name
+		Pageable pageable = PageRequest.of(page - 1, pageSize, Sort.by("lastName").ascending());
+		return owners.findByLastNameContainingIgnoreCase(lastname, pageable);
 	}
 
 	@GetMapping("/owners/{ownerId}/edit")
