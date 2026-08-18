@@ -16,9 +16,13 @@
 
 package org.springframework.samples.petclinic.owner;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.view;
@@ -27,12 +31,14 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledInNativeImage;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.test.context.aot.DisabledInAotMode;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDate;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -40,6 +46,7 @@ import java.util.Optional;
  *
  * @author Colin But
  * @author Wick Dynex
+ * @author Synapse Builder
  */
 @WebMvcTest(VisitController.class)
 @DisabledInNativeImage
@@ -56,13 +63,26 @@ class VisitControllerTests {
 	@MockitoBean
 	private OwnerRepository owners;
 
+	@MockitoBean
+	private VisitService visitService;
+
+	private Owner testOwner;
+	private Pet testPet;
+
 	@BeforeEach
 	void init() {
-		Owner owner = new Owner();
-		Pet pet = new Pet();
-		owner.addPet(pet);
-		pet.setId(TEST_PET_ID);
-		given(this.owners.findById(TEST_OWNER_ID)).willReturn(Optional.of(owner));
+		testOwner = new Owner();
+		testOwner.setId(TEST_OWNER_ID);
+		testOwner.setFirstName("George");
+		testOwner.setLastName("Franklin");
+
+		testPet = new Pet();
+		testPet.setId(TEST_PET_ID);
+		testPet.setName("Leo");
+		testPet.setOwner(testOwner);
+		testOwner.addPet(testPet);
+
+		given(this.owners.findById(TEST_OWNER_ID)).willReturn(Optional.of(testOwner));
 	}
 
 	@Test
@@ -74,20 +94,25 @@ class VisitControllerTests {
 
 	@Test
 	void processNewVisitFormSuccess() throws Exception {
+		when(visitService.saveVisit(any(Visit.class))).thenReturn(null);
+
 		mockMvc
 			.perform(post("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, TEST_PET_ID)
-				.param("name", "George")
 				.param("date", LocalDate.now().plusDays(1).toString())
-				.param("description", "Visit Description"))
+				.param("description", "Visit Description")
+                .param("status", VisitStatus.SCHEDULED.name()))
 			.andExpect(status().is3xxRedirection())
 			.andExpect(view().name("redirect:/owners/{ownerId}"));
+
+		verify(visitService).saveVisit(any(Visit.class));
 	}
 
 	@Test
 	void processNewVisitFormHasErrors() throws Exception {
 		mockMvc
-			.perform(post("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, TEST_PET_ID).param("name",
-					"George"))
+			.perform(post("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, TEST_PET_ID)
+                .param("date", LocalDate.now().plusDays(1).toString())
+                .param("description", ""))
 			.andExpect(model().attributeHasErrors("visit"))
 			.andExpect(status().isOk())
 			.andExpect(view().name("pets/createOrUpdateVisitForm"));
@@ -97,7 +122,6 @@ class VisitControllerTests {
 	void processNewVisitFormHasErrorsWhenVisitDateIsNotInFuture() throws Exception {
 		mockMvc
 			.perform(post("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, TEST_PET_ID)
-				.param("name", "George")
 				.param("date", LocalDate.now().toString())
 				.param("description", "Visit Description"))
 			.andExpect(model().attributeHasFieldErrors("visit", "date"))
@@ -105,5 +129,39 @@ class VisitControllerTests {
 			.andExpect(status().isOk())
 			.andExpect(view().name("pets/createOrUpdateVisitForm"));
 	}
+
+    @Test
+    void searchVisitsReturnsFilteredResults() throws Exception {
+        Visit visit1 = new Visit();
+        visit1.setId(1);
+        visit1.setDate(LocalDate.now().plusDays(5));
+        visit1.setDescription("Routine checkup");
+        visit1.setPet(testPet);
+        visit1.setStatus(VisitStatus.SCHEDULED);
+
+        Visit visit2 = new Visit();
+        visit2.setId(2);
+        visit2.setDate(LocalDate.now().plusDays(10));
+        visit2.setDescription("Vaccination");
+        visit2.setPet(testPet);
+        visit2.setStatus(VisitStatus.SCHEDULED);
+
+        List<Visit> mockVisits = Arrays.asList(visit1, visit2);
+
+        when(visitService.findVisits(any(VisitSearchCriteriaDTO.class))).thenReturn(mockVisits);
+
+        mockMvc.perform(get("/visits/search")
+                .param("startDate", LocalDate.now().toString())
+                .param("endDate", LocalDate.now().plusDays(15).toString())
+                .param("petName", "Leo")
+                .param("status", VisitStatus.SCHEDULED.name()))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].id").value(1))
+            .andExpect(jsonPath("$[0].description").value("Routine checkup"))
+            .andExpect(jsonPath("$[1].id").value(2))
+            .andExpect(jsonPath("$[1].description").value("Vaccination"));
+
+        verify(visitService).findVisits(any(VisitSearchCriteriaDTO.class));
+    }
 
 }
