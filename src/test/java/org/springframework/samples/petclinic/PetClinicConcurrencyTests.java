@@ -15,6 +15,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.boot.restclient.RestTemplateBuilder;
+import org.springframework.core.env.Environment;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -25,7 +26,7 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 
-@SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
+@SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT, properties = "spring.threads.virtual.enabled=true")
 public class PetClinicConcurrencyTests {
 
 	@LocalServerPort
@@ -36,6 +37,14 @@ public class PetClinicConcurrencyTests {
 
 	@Autowired
 	private RestTemplateBuilder restTemplateBuilder;
+
+	@Autowired
+	private Environment environment;
+
+	@Test
+	void virtualThreadsAreEnabled() {
+		assertThat(environment.getProperty("spring.threads.virtual.enabled")).isEqualTo("true");
+	}
 
 	@Test
 	public void testDuplicatePetNameRaceConditionIsBlocked() throws Exception {
