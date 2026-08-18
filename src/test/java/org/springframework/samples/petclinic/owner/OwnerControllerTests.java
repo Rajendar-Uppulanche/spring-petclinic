@@ -276,4 +276,30 @@ class OwnerControllerTests {
 			.andExpect(flash().attributeExists("error"));
 	}
 
+	@Test
+	void unsubscribeRemindersSuccess() throws Exception {
+		Owner george = george();
+		george.setReceivesVaccinationReminders(true); // Ensure it's true initially
+		given(this.owners.findById(TEST_OWNER_ID)).willReturn(Optional.of(george));
+
+		mockMvc.perform(get("/owners/{ownerId}/unsubscribeReminders", TEST_OWNER_ID))
+			.andExpect(status().is3xxRedirection())
+			.andExpect(redirectedUrl("/owners/" + TEST_OWNER_ID))
+			.andExpect(flash().attributeExists("message"));
+
+		verify(this.owners, times(1)).save(george);
+	}
+
+	@Test
+	void unsubscribeRemindersOwnerNotFound() throws Exception {
+		given(this.owners.findById(TEST_OWNER_ID)).willReturn(Optional.empty());
+
+		mockMvc.perform(get("/owners/{ownerId}/unsubscribeReminders", TEST_OWNER_ID))
+			.andExpect(status().is3xxRedirection())
+			.andExpect(redirectedUrl("/owners/" + TEST_OWNER_ID))
+			.andExpect(flash().attributeExists("error"));
+
+		verify(this.owners, times(0)).save(any(Owner.class));
+	}
+
 }

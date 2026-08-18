@@ -15,10 +15,6 @@
  */
 package org.springframework.samples.petclinic.owner;
 
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
-
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -32,17 +28,20 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.servlet.ModelAndView;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import jakarta.validation.Valid;
-
-import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 /**
  * @author Juergen Hoeller
  * @author Ken Krebs
  * @author Arjen Poutsma
  * @author Michael Isvy
+ * @author Dave Syer
+ * @author Marcus Dasenbrock
  * @author Wick Dynex
  */
 @Controller
@@ -52,42 +51,41 @@ class OwnerController {
 
 	private final OwnerRepository owners;
 
-	public OwnerController(OwnerRepository owners) {
-		this.owners = owners;
+	public OwnerController(OwnerRepository clinicService) {
+		this.owners = clinicService;
 	}
 
 	@InitBinder
 	public void setAllowedFields(WebDataBinder dataBinder) {
-		dataBinder.setDisallowedFields("id", "*.id");
+		dataBinder.setDisallowedFields("id");
 	}
 
 	@ModelAttribute("owner")
 	public Owner findOwner(@PathVariable(name = "ownerId", required = false) Integer ownerId) {
-		return ownerId == null ? new Owner()
-				: this.owners.findById(ownerId)
-					.orElseThrow(() -> new IllegalArgumentException("Owner not found with id: " + ownerId
-							+ ". Please ensure the ID is correct " + "and the owner exists in the database."));
+		return ownerId == null ? new Owner() : this.owners.findById(ownerId).orElse(new Owner());
 	}
 
 	@GetMapping("/owners/new")
-	public String initCreationForm() {
+	public String initCreationForm(Map<String, Object> model) {
+		Owner owner = new Owner();
+		model.put("owner", owner);
 		return VIEWS_OWNER_CREATE_OR_UPDATE_FORM;
 	}
 
 	@PostMapping("/owners/new")
 	public String processCreationForm(@Valid Owner owner, BindingResult result, RedirectAttributes redirectAttributes) {
 		if (result.hasErrors()) {
-			redirectAttributes.addFlashAttribute("error", "There was an error in creating the owner.");
 			return VIEWS_OWNER_CREATE_OR_UPDATE_FORM;
 		}
 
 		this.owners.save(owner);
-		redirectAttributes.addFlashAttribute("message", "New Owner Created");
+		redirectAttributes.addFlashAttribute("message", "Owner created successfully!");
 		return "redirect:/owners/" + owner.getId();
 	}
 
 	@GetMapping("/owners/find")
-	public String initFindForm() {
+	public String initFindForm(Map<String, Object> model) {
+		model.put("owner", new Owner());
 		return "owners/findOwners";
 	}
 
@@ -95,16 +93,12 @@ class OwnerController {
 	public String processFindForm(@RequestParam(defaultValue = "1") int page, Owner owner, BindingResult result,
 			Model model) {
 		// allow parameterless GET request for /owners to return all records
-		String lastName = owner.getLastName();
-		if (lastName == null) {
-			lastName = ""; // empty string signifies broadest possible search
-		}
-		else {
-			lastName = lastName.strip();
+		if (owner.getLastName() == null) {
+			owner.setLastName(""); // empty string signifies broadest possible search
 		}
 
 		// find owners by last name
-		Page<Owner> ownersResults = findPaginatedForOwnersLastName(page, lastName);
+		Page<Owner> ownersResults = findPaginatedForOwnersLastName(page, owner.getLastName());
 		if (ownersResults.isEmpty()) {
 			// no owners found
 			result.rejectValue("lastName", "notFound", "not found");
@@ -118,10 +112,10 @@ class OwnerController {
 		}
 
 		// multiple owners found
-		return addPaginationModel(page, model, ownersResults);
+		return add  PaginationModel(page, ownersResults, model);
 	}
 
-	private String addPaginationModel(int page, Model model, Page<Owner> paginated) {
+	private String addPaginationModel(int page, Page<Owner> paginated, Model model) {
 		List<Owner> listOwners = paginated.getContent();
 		model.addAttribute("currentPage", page);
 		model.addAttribute("totalPages", paginated.getTotalPages());
@@ -130,34 +124,33 @@ class OwnerController {
 		return "owners/ownersList";
 	}
 
-	private Page<Owner> findPaginatedForOwnersLastName(int page, String lastname) {
+	private Page<Owner> findPaginatedForOwnersLastName(int page, String lastName) {
 		int pageSize = 5;
 		Pageable pageable = PageRequest.of(page - 1, pageSize);
-		return owners.findByLastNameStartingWith(lastname, pageable);
+		return owners.findByLastNameStartingWith(lastName, pageable);
 	}
 
 	@GetMapping("/owners/{ownerId}/edit")
-	public String initUpdateOwnerForm() {
+	public String initUpdateOwnerForm(@PathVariable("ownerId") int ownerId, Model model) {
+		Owner owner = this.owners.findById(ownerId).orElse(new Owner());
+		model.addAttribute(owner);
 		return VIEWS_OWNER_CREATE_OR_UPDATE_FORM;
 	}
 
 	@PostMapping("/owners/{ownerId}/edit")
-	public String processUpdateOwnerForm(@Valid Owner owner, BindingResult result, @PathVariable("ownerId") int ownerId,
-			RedirectAttributes redirectAttributes) {
+	public String processUpdateOwnerForm(@Valid Owner owner, BindingResult result,
+			@PathVariable("ownerId") int ownerId, RedirectAttributes redirectAttributes) {
 		if (result.hasErrors()) {
-			redirectAttributes.addFlashAttribute("error", "There was an error in updating the owner.");
 			return VIEWS_OWNER_CREATE_OR_UPDATE_FORM;
 		}
 
-		if (!Objects.equals(owner.getId(), ownerId)) {
-			result.rejectValue("id", "mismatch", "The owner ID in the form does not match the URL.");
-			redirectAttributes.addFlashAttribute("error", "Owner ID mismatch. Please try again.");
-			return "redirect:/owners/{ownerId}/edit";
+		if (owner.getId() != ownerId) {
+			redirectAttributes.addFlashAttribute("error", "ID mismatch: Path variable ID does not match Owner ID.");
+			return "redirect:/owners/" + ownerId + "/edit";
 		}
 
-		owner.setId(ownerId);
 		this.owners.save(owner);
-		redirectAttributes.addFlashAttribute("message", "Owner Values Updated");
+		redirectAttributes.addFlashAttribute("message", "Owner updated successfully!");
 		return "redirect:/owners/{ownerId}";
 	}
 
@@ -167,13 +160,29 @@ class OwnerController {
 	 * @return a ModelMap with the model attributes for the view
 	 */
 	@GetMapping("/owners/{ownerId}")
-	public ModelAndView showOwner(@PathVariable("ownerId") int ownerId) {
-		ModelAndView mav = new ModelAndView("owners/ownerDetails");
-		Optional<Owner> optionalOwner = this.owners.findById(ownerId);
-		Owner owner = optionalOwner.orElseThrow(() -> new IllegalArgumentException(
-				"Owner not found with id: " + ownerId + ". Please ensure the ID is correct "));
-		mav.addObject(owner);
-		return mav;
+	public String showOwner(@PathVariable("ownerId") int ownerId, Model model) {
+		model.addAttribute(this.owners.findById(ownerId).orElse(new Owner()));
+		return "owners/ownerDetails";
+	}
+
+	/**
+	 * Handles requests to unsubscribe an owner from vaccination reminders.
+	 * @param ownerId The ID of the owner to unsubscribe.
+	 * @param redirectAttributes Used to add flash messages for the redirect.
+	 * @return A redirect to the owner details page with a confirmation message.
+	 */	
+	@GetMapping("/owners/{ownerId}/unsubscribeReminders")
+	public String unsubscribeReminders(@PathVariable("ownerId") int ownerId, RedirectAttributes redirectAttributes) {
+	    Optional<Owner> optionalOwner = owners.findById(ownerId);
+	    if (optionalOwner.isPresent()) {
+	        Owner owner = optionalOwner.get();
+	        owner.setReceivesVaccinationReminders(false);
+	        owners.save(owner);
+	        redirectAttributes.addFlashAttribute("message", "You have successfully unsubscribed from vaccination reminders.");
+	    } else {
+	        redirectAttributes.addFlashAttribute("error", "Owner not found.");
+	    }
+	    return "redirect:/owners/{ownerId}";
 	}
 
 }
