@@ -16,9 +16,12 @@
 package org.springframework.samples.petclinic.owner;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.WebDataBinder;
@@ -27,6 +30,7 @@ import org.springframework.web.bind.annotation.InitBinder;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
 
 import jakarta.validation.Valid;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
@@ -38,14 +42,17 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
  * @author Michael Isvy
  * @author Dave Syer
  * @author Wick Dynex
+ * @author Synapse Builder
  */
 @Controller
 class VisitController {
 
 	private final OwnerRepository owners;
+    private final VisitService visitService;
 
-	public VisitController(OwnerRepository owners) {
+	public VisitController(OwnerRepository owners, VisitService visitService) {
 		this.owners = owners;
+        this.visitService = visitService;
 	}
 
 	@InitBinder
@@ -77,6 +84,7 @@ class VisitController {
 
 		Visit visit = new Visit();
 		pet.addVisit(visit);
+        visit.setPet(pet); // Ensure the pet is set on the visit object
 		return visit;
 	}
 
@@ -96,19 +104,37 @@ class VisitController {
 	// called
 	@PostMapping("/owners/{ownerId}/pets/{petId}/visits/new")
 	public String processNewVisitForm(@ModelAttribute Owner owner, @PathVariable int petId, @Valid Visit visit,
-			BindingResult result, RedirectAttributes redirectAttributes) {
+			BindingResult result, RedirectAttributes redirectAttributes, Map<String, Object> model) {
 		if (visit.getDate() != null && !visit.getDate().isAfter(LocalDate.now())) {
 			result.rejectValue("date", "typeMismatch.visitDate");
 		}
 
 		if (result.hasErrors()) {
+            model.put("pet", owner.getPet(petId));
+            model.put("owner", owner);
 			return "pets/createOrUpdateVisitForm";
 		}
 
-		owner.addVisit(petId, visit);
-		this.owners.save(owner);
+        Pet pet = owner.getPet(petId);
+        if (pet == null) {
+            throw new IllegalArgumentException("Pet with id " + petId + " not found for owner with id " + owner.getId() + ".");
+        }
+        visit.setPet(pet);
+
+        if (visit.getStatus() == null) {
+            visit.setStatus(VisitStatus.SCHEDULED);
+        }
+
+		this.visitService.saveVisit(visit);
 		redirectAttributes.addFlashAttribute("message", "Your visit has been booked");
 		return "redirect:/owners/{ownerId}";
 	}
+
+    @GetMapping("/visits/search")
+    @ResponseBody
+    public ResponseEntity<List<Visit>> searchVisits(@ModelAttribute VisitSearchCriteriaDTO criteria) {
+        List<Visit> visits = visitService.findVisits(criteria);
+        return new ResponseEntity<>(visits, HttpStatus.OK);
+    }
 
 }
