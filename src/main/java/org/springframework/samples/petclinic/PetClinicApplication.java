@@ -18,19 +18,40 @@ package org.springframework.samples.petclinic;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.context.annotation.ImportRuntimeHints;
+import org.springframework.scheduling.annotation.EnableScheduling; 
+import org.springframework.scheduling.annotation.Scheduled; 
+import org.springframework.samples.petclinic.owner.VaccinationReminderService; 
+import org.springframework.beans.factory.annotation.Autowired; 
 
 /**
  * PetClinic Spring Boot Application.
  *
  * @author Dave Syer
+ * @author Ken Krebs
+ * @author Juergen Hoeller
+ * @author Sam Brannen
+ * @author Mark Fisher
+ * @author Michael Isvy
+ * @author Wick Dynex
  */
 @SpringBootApplication
-@ImportRuntimeHints(PetClinicRuntimeHints.class)
+@EnableScheduling 
 public class PetClinicApplication {
+
+    @Autowired 
+    private VaccinationReminderService vaccinationReminderService; 
 
 	public static void main(String[] args) {
 		SpringApplication.run(PetClinicApplication.class, args);
 	}
 
+    @Scheduled(cron = "0 0 9 * * *") 
+    public void runTwoWeekReminders() {
+        vaccinationReminderService.sendTwoWeekReminders();
+    }
+
+    @Scheduled(cron = "0 0 10 * * *") 
+    public void runThreeDayReminders() {
+        vaccinationReminderService.sendThreeDayReminders();
+    }
 }
