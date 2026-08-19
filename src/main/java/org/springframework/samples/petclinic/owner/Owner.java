@@ -58,7 +58,7 @@ public class Owner extends Person {
 
 	@Column
 	@NotBlank
-	@Pattern(regexp = "\\d{10}", message = "{telephone.invalid}")
+	@Pattern(regexp = "\\d{10,15}", message = "{telephone.invalid}")
 	private String telephone;
 
 	@OneToMany(cascade = CascadeType.ALL, fetch = FetchType.EAGER)
@@ -113,8 +113,7 @@ public class Owner extends Person {
 	 * Return the Pet with the given id, or null if none found for this Owner.
 	 * @param id to test
 	 * @return the Pet with the given id, or null if no such Pet exists for this Owner
-	 */
-	public Pet getPet(Integer id) {
+	 */	public Pet getPet(Integer id) {
 		for (Pet pet : getPets()) {
 			if (!pet.isNew()) {
 				Integer compId = pet.getId();
