@@ -74,6 +74,15 @@ public class Pet extends NamedEntity {
 		this.type = type;
 	}
 
+	/**
+	 * Returns the name of the pet.
+	 * This method will never return null; it returns an empty string if the pet's name is not set.
+	 * @return the name of the pet, or an empty string if not set.
+	 */	@Override
+	public String getName() {
+		return this.name != null ? this.name : "";
+	}
+
 	public Collection<Visit> getVisits() {
 		return this.visits;
 	}
