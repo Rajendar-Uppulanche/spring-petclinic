@@ -76,8 +76,7 @@ class OwnerControllerTests {
 		george.setFirstName("George");
 		george.setLastName("Franklin");
 		george.setAddress("110 W. Liberty St.");
-		george.setCity("Madison");
-		george.setTelephone("6085551023");
+		george.setCity("Madison");		george.setTelephone("6085551023");
 		Pet max = new Pet();
 		PetType dog = new PetType();
 		dog.setName("dog");
@@ -144,8 +143,12 @@ class OwnerControllerTests {
 	@Test
 	void processFindFormSuccess() throws Exception {
 		Page<Owner> tasks = new PageImpl<>(List.of(george(), new Owner()));
-		when(this.owners.findByLastNameStartingWith(anyString(), any(Pageable.class))).thenReturn(tasks);
-		mockMvc.perform(get("/owners?page=1")).andExpect(status().isOk()).andExpect(view().name("owners/ownersList"));
+		when(this.owners.findByLastNameStartingWith(eq(""), any(Pageable.class))).thenReturn(tasks);
+		mockMvc.perform(get("/owners?page=1"))
+			.andExpect(status().isOk())
+			.andExpect(view().name("owners/ownersList"))
+			.andExpect(model().attributeExists("owner"))
+			.andExpect(model().attribute("owner", hasProperty("lastName", is(""))));
 	}
 
 	@Test
@@ -178,7 +181,9 @@ class OwnerControllerTests {
 
 		mockMvc.perform(get("/owners?page=1").param("lastName", "   "))
 			.andExpect(status().isOk())
-			.andExpect(view().name("owners/ownersList"));
+			.andExpect(view().name("owners/ownersList"))
+			.andExpect(model().attributeExists("owner"))
+			.andExpect(model().attribute("owner", hasProperty("lastName", is(""))));
 
 		verify(this.owners).findByLastNameStartingWith(eq(""), any(Pageable.class));
 	}
