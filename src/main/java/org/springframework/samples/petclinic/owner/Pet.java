@@ -1,27 +1,4 @@
-/*
- * Copyright 2012-2025 the original author or authors.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package org.springframework.samples.petclinic.owner;
-
-import java.time.LocalDate;
-import java.util.Collection;
-import java.util.LinkedHashSet;
-import java.util.Set;
-
-import org.springframework.format.annotation.DateTimeFormat;
-import org.springframework.samples.petclinic.model.NamedEntity;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -30,56 +7,74 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
-import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.samples.petclinic.model.BaseEntity;
 
-/**
- * Simple business object representing a pet.
- *
- * @author Ken Krebs
- * @author Juergen Hoeller
- * @author Sam Brannen
- * @author Wick Dynex
- */
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
+
 @Entity
 @Table(name = "pets")
-public class Pet extends NamedEntity {
+public class Pet extends BaseEntity {
 
-	@Column
-	@DateTimeFormat(pattern = "yyyy-MM-dd")
-	private LocalDate birthDate;
+    @Column(name = "name")
+    @NotBlank
+    private String name;
 
-	@ManyToOne
-	@JoinColumn(name = "type_id")
-	private PetType type;
+    @Column(name = "birth_date")
+    @DateTimeFormat(pattern = "yyyy/MM/dd")
+    private LocalDate birthDate;
 
-	@OneToMany(cascade = CascadeType.ALL, fetch = FetchType.EAGER)
-	@JoinColumn(name = "pet_id")
-	@OrderBy("date ASC")
-	private final Set<Visit> visits = new LinkedHashSet<>();
+    @ManyToOne
+    @JoinColumn(name = "type_id")
+    @NotNull
+    private PetType type;
 
-	public void setBirthDate(LocalDate birthDate) {
-		this.birthDate = birthDate;
-	}
+    @ManyToOne
+    @JoinColumn(name = "owner_id")
+    private Owner owner;
 
-	public LocalDate getBirthDate() {
-		return this.birthDate;
-	}
+    @OneToMany(cascade = CascadeType.ALL, mappedBy = "pet", fetch = FetchType.EAGER)
+    private Set<Visit> visits = new LinkedHashSet<>();
 
-	public PetType getType() {
-		return this.type;
-	}
+    @Transient
+    private int visitCount;
 
-	public void setType(PetType type) {
-		this.type = type;
-	}
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
+    public LocalDate getBirthDate() { return birthDate; }
+    public void setBirthDate(LocalDate birthDate) { this.birthDate = birthDate; }
+    public PetType getType() { return type; }
+    public void setType(PetType type) { this.type = type; }
+    public Owner getOwner() { return owner; }
+    public void setOwner(Owner owner) { this.owner = owner; }
+    public Set<Visit> getVisits() { return visits; }
+    public void addVisit(Visit visit) {
+        if (visit.isNew()) {
+            getVisits().add(visit);
+            visit.setPet(this);
+        }
+    }
 
-	public Collection<Visit> getVisits() {
-		return this.visits;
-	}
+    public int getVisitCount() {
+        return visitCount;
+    }
 
-	public void addVisit(Visit visit) {
-		getVisits().add(visit);
-	}
+    public void setVisitCount(int visitCount) {
+        this.visitCount = visitCount;
+    }
 
+    public List<Visit> getVisitsOrdered() {
+        List<Visit> sortedVisits = new ArrayList<>(getVisits());
+        sortedVisits.sort((v1, v2) -> v2.getDate().compareTo(v1.getDate()));
+        return Collections.unmodifiableList(sortedVisits);
+    }
 }
