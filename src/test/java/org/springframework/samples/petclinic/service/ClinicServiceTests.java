@@ -22,6 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.springframework.dao.DataIntegrityViolationException;
 import java.time.LocalDate;
 import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
@@ -43,24 +44,24 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Integration test of the Service and the Repository layer.
- * <p>
+ * &lt;p&gt;
  * ClinicServiceSpringDataJpaTests subclasses benefit from the following services provided
  * by the Spring TestContext Framework:
- * </p>
- * <ul>
- * <li><strong>Spring IoC container caching</strong> which spares us unnecessary set up
- * time between test execution.</li>
- * <li><strong>Dependency Injection</strong> of test fixture instances, meaning that we
+ * &lt;/p&gt;
+ * &lt;ul&gt;
+ * &lt;li&gt;&lt;strong&gt;Spring IoC container caching&lt;/strong&gt; which spares us unnecessary set up
+ * time between test execution.&lt;/li&gt;
+ * &lt;li&gt;&lt;strong&gt;Dependency Injection&lt;/strong&gt; of test fixture instances, meaning that we
  * don't need to perform application context lookups. See the use of
- * {@link Autowired @Autowired} on the <code> </code> instance variable, which uses
- * autowiring <em>by type</em>.
- * <li><strong>Transaction management</strong>, meaning each test method is executed in
+ * {@link Autowired @Autowired} on the &lt;code&gt; &lt;/code&gt; instance variable, which uses
+ * autowiring &lt;em&gt;by type&lt;/em&gt;.
+ * &lt;li&gt;&lt;strong&gt;Transaction management&lt;/strong&gt;, meaning each test method is executed in
  * its own transaction, which is automatically rolled back by default. Thus, even if tests
  * insert or otherwise change database state, there is no need for a teardown or cleanup
  * script.
- * <li>An {@link org.springframework.context.ApplicationContext ApplicationContext} is
- * also inherited and can be used for explicit bean lookup if necessary.</li>
- * </ul>
+ * &lt;li&gt;An {@link org.springframework.context.ApplicationContext ApplicationContext} is
+ * also inherited and can be used for explicit bean lookup if necessary.&lt;/li&gt;
+ * &lt;/ul&gt;
  *
  * @author Ken Krebs
  * @author Rod Johnson
@@ -87,12 +88,87 @@ class ClinicServiceTests {
 	private final Pageable pageable = Pageable.unpaged();
 
 	@Test
-	void shouldFindOwnersByLastName() {
-		Page<Owner> owners = this.owners.findByLastNameStartingWith("Davis", pageable);
-		assertThat(owners).hasSize(2);
+	@Transactional // Ensure transaction for data insertion and rollback
+	void shouldFindOwnersByLastNameContainingIgnoreCaseAndSorted() {
+		// Add test data for case-insensitivity and sorting
+		Owner owner1 = new Owner();
+		owner1.setFirstName("Alice");
+		owner1.setLastName("Smith");
+		owner1.setAddress("123 Main St");
+		owner1.setCity("Anytown");
+		owner1.setTelephone("1111111111");
+		this.owners.save(owner1);
 
-		owners = this.owners.findByLastNameStartingWith("Daviss", pageable);
-		assertThat(owners).isEmpty();
+		Owner owner2 = new Owner();
+		owner2.setFirstName("Bob");
+		owner2.setLastName("smith"); // Case-insensitive match
+		owner2.setAddress("456 Oak Ave");
+		owner2.setCity("Anytown");
+		owner2.setTelephone("2222222222");
+		this.owners.save(owner2);
+
+		Owner owner3 = new Owner();
+		owner3.setFirstName("Charlie");
+		owner3.setLastName("Smyth"); // Partial match
+		owner3.setAddress("789 Pine Ln");
+		owner3.setCity("Anytown");
+		owner3.setTelephone("3333333333");
+		this.owners.save(owner3);
+
+		Owner owner4 = new Owner();
+		owner4.setFirstName("David");
+		owner4.setLastName("Smither"); // Partial match
+		owner4.setAddress("101 Elm St");
+		owner4.setCity("Anytown");
+		owner4.setTelephone("4444444444");
+		this.owners.save(owner4);
+
+		// Test partial and case-insensitive search for "smi"
+		Page<Owner> foundOwners = this.owners.findByLastNameContainingIgnoreCaseOrderByLastNameAsc("smi", pageable);
+		assertThat(foundOwners).hasSize(4); // Smith, smith, Smyth, Smither
+
+		// Verify sorting: Smith (Alice), smith (Bob), Smither (David), Smyth (Charlie)
+		List<Owner> ownerList = foundOwners.getContent();
+		assertThat(ownerList.get(0).getLastName()).isEqualTo("Smith");
+		assertThat(ownerList.get(0).getFirstName()).isEqualTo("Alice");
+		assertThat(ownerList.get(1).getLastName()).isEqualTo("smith");
+		assertThat(ownerList.get(1).getFirstName()).isEqualTo("Bob");
+		assertThat(ownerList.get(2).getLastName()).isEqualTo("Smither");
+		assertThat(ownerList.get(2).getFirstName()).isEqualTo("David");
+		assertThat(ownerList.get(3).getLastName()).isEqualTo("Smyth");
+		assertThat(ownerList.get(3).getFirstName()).isEqualTo("Charlie");
+
+
+		// Test search for "franklin" (case-insensitive, partial) - should find existing Franklin
+		foundOwners = this.owners.findByLastNameContainingIgnoreCaseOrderByLastNameAsc("franklin", pageable);
+		assertThat(foundOwners).hasSize(1); // Only the existing Franklin
+		assertThat(foundOwners.iterator().next().getLastName()).isEqualTo("Franklin");
+
+		// Test empty string (should return all owners, including newly added ones)
+		foundOwners = this.owners.findByLastNameContainingIgnoreCaseOrderByLastNameAsc("", pageable);
+		// Initial 10 owners + 4 new ones = 14
+		assertThat(foundOwners.getTotalElements()).isEqualTo(14);
+
+		// Test no match
+		foundOwners = this.owners.findByLastNameContainingIgnoreCaseOrderByLastNameAsc("NonExistent", pageable);
+		assertThat(foundOwners).isEmpty();
+
+		// Test special characters (assuming literal match)
+		Owner ownerWithSpecialChar = new Owner();
+		ownerWithSpecialChar.setFirstName("Special");
+		ownerWithSpecialChar.setLastName("O'Connell");
+		ownerWithSpecialChar.setAddress("123 Test");
+		ownerWithSpecialChar.setCity("TestCity");
+		ownerWithSpecialChar.setTelephone("5555555555");
+		this.owners.save(ownerWithSpecialChar);
+
+		foundOwners = this.owners.findByLastNameContainingIgnoreCaseOrderByLastNameAsc("o'conn", pageable);
+		assertThat(foundOwners).hasSize(1);
+		assertThat(foundOwners.iterator().next().getLastName()).isEqualTo("O'Connell");
+
+		foundOwners = this.owners.findByLastNameContainingIgnoreCaseOrderByLastNameAsc("O'CONNELL", pageable);
+		assertThat(foundOwners).hasSize(1);
+		assertThat(foundOwners.iterator().next().getLastName()).isEqualTo("O'Connell");
 	}
 
 	@Test
@@ -109,7 +185,7 @@ class ClinicServiceTests {
 	@Test
 	@Transactional
 	void shouldInsertOwner() {
-		Page<Owner> owners = this.owners.findByLastNameStartingWith("Schultz", pageable);
+		Page<Owner> owners = this.owners.findByLastNameContainingIgnoreCaseOrderByLastNameAsc("Schultz", pageable);
 		int found = (int) owners.getTotalElements();
 
 		Owner owner = new Owner();
@@ -121,7 +197,7 @@ class ClinicServiceTests {
 		this.owners.save(owner);
 		assertThat(owner.getId()).isNotZero();
 
-		owners = this.owners.findByLastNameStartingWith("Schultz", pageable);
+		owners = this.owners.findByLastNameContainingIgnoreCaseOrderByLastNameAsc("Schultz", pageable);
 		assertThat(owners.getTotalElements()).isEqualTo(found + 1);
 	}
 

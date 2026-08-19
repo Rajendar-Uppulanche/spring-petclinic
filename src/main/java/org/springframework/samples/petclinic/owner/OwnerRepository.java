@@ -22,7 +22,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 /**
- * Repository class for <code>Owner</code> domain objects. All method names are compliant
+ * Repository class for `Owner` domain objects. All method names are compliant
  * with Spring Data naming conventions so this interface can easily be extended for Spring
  * Data. See:
  * https://docs.spring.io/spring-data/jpa/docs/current/reference/html/#repositories.query-methods.query-creation
@@ -37,7 +37,7 @@ public interface OwnerRepository extends JpaRepository<Owner, Integer> {
 
 	/**
 	 * Retrieve {@link Owner}s from the data store by last name, returning all owners
-	 * whose last name <i>starts</i> with the given name.
+	 * whose last name &lt;i&gt;starts&lt;/i&gt; with the given name.
 	 * @param lastName Value to search for
 	 * @return a Collection of matching {@link Owner}s (or an empty Collection if none
 	 * found)
@@ -45,12 +45,21 @@ public interface OwnerRepository extends JpaRepository<Owner, Integer> {
 	Page<Owner> findByLastNameStartingWith(String lastName, Pageable pageable);
 
 	/**
+	 * Retrieve {@link Owner}s from the data store by last name, supporting partial,
+	 * case-insensitive matching, and sorting results alphabetically by last name.
+	 * @param lastName Value to search for (can be partial)
+	 * @param pageable Pagination information
+	 * @return a Page of matching {@link Owner}s (or an empty Page if none found), sorted by last name.
+	 */
+	Page<Owner> findByLastNameContainingIgnoreCaseOrderByLastNameAsc(String lastName, Pageable pageable);
+
+	/**
 	 * Retrieve an {@link Owner} from the data store by id.
-	 * <p>
+	 * &lt;p&gt;
 	 * This method returns an {@link Optional} containing the {@link Owner} if found. If
 	 * no {@link Owner} is found with the provided id, it will return an empty
 	 * {@link Optional}.
-	 * </p>
+	 * &lt;/p&gt;
 	 * @param id the id to search for
 	 * @return an {@link Optional} containing the {@link Owner} if found, or an empty
 	 * {@link Optional} if not found.
