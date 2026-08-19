@@ -82,4 +82,12 @@ public class Pet extends NamedEntity {
 		getVisits().add(visit);
 	}
 
+	/**
+	 * Gets the number of visits for this pet.
+	 * @return the total number of visits
+	 */
+	public int getVisitCount() {
+		return this.visits.size();
+	}
+
 }
