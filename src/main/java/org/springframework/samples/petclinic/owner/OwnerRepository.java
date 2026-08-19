@@ -15,6 +15,7 @@
  */
 package org.springframework.samples.petclinic.owner;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.domain.Page;
@@ -42,7 +43,23 @@ public interface OwnerRepository extends JpaRepository<Owner, Integer> {
 	 * @return a Collection of matching {@link Owner}s (or an empty Collection if none
 	 * found)
 	 */
-	Page<Owner> findByLastNameStartingWith(String lastName, Pageable pageable);
+	// Page<Owner> findByLastNameStartingWith(String lastName, Pageable pageable);
+
+	/**
+	 * Retrieve {@link Owner}s from the data store by last name, supporting partial and
+	 * case-insensitive matching, sorted alphabetically by last name.
+	 * @param lastName Value to search for
+	 * @param pageable Pagination information
+	 * @return a Page of matching {@link Owner}s
+	 */
+	Page<Owner> findByLastNameContainingIgnoreCaseOrderByLastNameAsc(String lastName, Pageable pageable);
+
+	/**
+	 * Retrieve all {@link Owner}s from the data store, sorted alphabetically by last name.
+	 * @param pageable Pagination information
+	 * @return a Page of all {@link Owner}s
+	 */
+	Page<Owner> findAllByOrderByLastNameAsc(Pageable pageable);
 
 	/**
 	 * Retrieve an {@link Owner} from the data store by id.
@@ -58,5 +75,11 @@ public interface OwnerRepository extends JpaRepository<Owner, Integer> {
 	 * input for id)
 	 */
 	Optional<Owner> findById(Integer id);
+
+	/**
+	 * Retrieve all {@link Owner}s from the data store.
+	 * @return a List of all {@link Owner}s
+	 */
+	List<Owner> findAll();
 
 }
