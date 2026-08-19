@@ -1,25 +1,126 @@
 <!DOCTYPE html>
+<html xmlns:th="https://www.thymeleaf.org"
+      lang="en">
 
-<html xmlns:th="https://www.thymeleaf.org" th:replace="~{fragments/layout :: layout (~{::body},'owners')}">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PetClinic</title>
+    <link rel="stylesheet" th:href="@{/resources/css/petclinic.css}"/>
+    <link rel="stylesheet" th:href="@{/webjars/bootstrap/5.1.3/css/bootstrap.min.css}"/>
+    <script th:src="@{/webjars/jquery/3.6.0/jquery.min.js}"></script>
+    <script th:src="@{/webjars/bootstrap/5.1.3/js/bootstrap.min.js}"></script>
+    <script th:src="@{/resources/js/owner-form-validation.js}"></script> <!-- Link to new JS file -->
+</head>
 
 <body>
 
-  <h2 th:text="#{owner}">Owner</h2>
-  <form th:object="${owner}" class="form-horizontal" id="add-owner-form" method="post">
-    <div class="form-group has-feedback">
-      <input th:replace="~{fragments/inputField :: input (#{firstName}, 'firstName', 'text')}" />
-      <input th:replace="~{fragments/inputField :: input (#{lastName}, 'lastName', 'text')}" />
-      <input th:replace="~{fragments/inputField :: input (#{address}, 'address', 'text')}" />
-      <input th:replace="~{fragments/inputField :: input (#{city}, 'city', 'text')}" />
-      <input th:replace="~{fragments/inputField :: input (#{telephone}, 'telephone', 'text')}" />
-    </div>
-    <div class="form-group">
-      <div class="col-sm-offset-2 col-sm-10">
-        <button th:with="text=${owner['new']} ? #{addOwner} : #{updateOwner}" class="btn btn-primary" type="submit"
-          th:text="${text}">Add Owner</button>
-      </div>
-    </div>
-  </form>
-</body>
+<div class="container">
+    <div th:replace="~{fragments/bodyHeader :: bodyHeader}"/>
 
+    <h2>
+        <th:block th:if="${owner['new']}">New </th:block>
+        Owner
+    </h2>
+
+    <form th:object="${owner}" class="form-horizontal" id="add-owner-form" method="post">
+        <div class="form-group has-feedback">
+            <div class="form-group">
+                <label class="col-sm-2 control-label">First Name</label>
+                <div class="col-sm-10">
+                    <input
+                            th:field="*{firstName}"
+                            class="form-control"
+                            th:classappend="${#fields.hasErrors('firstName')} ? 'is-invalid'"
+                            id="firstName"
+                            type="text"
+                    />
+                    <span class="invalid-feedback" th:if="${#fields.hasErrors('firstName')}" th:errors="*{firstName}">
+                        Error
+                    </span>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-2 control-label">Last Name</label>
+                <div class="col-sm-10">
+                    <input
+                            th:field="*{lastName}"
+                            class="form-control"
+                            th:classappend="${#fields.hasErrors('lastName')} ? 'is-invalid'"
+                            id="lastName"
+                            type="text"
+                    />
+                    <span class="invalid-feedback" th:if="${#fields.hasErrors('lastName')}" th:errors="*{lastName}">
+                        Error
+                    </span>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-2 control-label">Address</label>
+                <div class="col-sm-10">
+                    <input
+                            th:field="*{address}"
+                            class="form-control"
+                            th:classappend="${#fields.hasErrors('address')} ? 'is-invalid'"
+                            id="address"
+                            type="text"
+                    />
+                    <span class="invalid-feedback" th:if="${#fields.hasErrors('address')}" th:errors="*{address}">
+                        Error
+                    </span>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-2 control-label">City</label>
+                <div class="col-sm-10">
+                    <input
+                            th:field="*{city}"
+                            class="form-control"
+                            th:classappend="${#fields.hasErrors('city')} ? 'is-invalid'"
+                            id="city"
+                            type="text"
+                    />
+                    <span class="invalid-feedback" th:if="${#fields.hasErrors('city')}" th:errors="*{city}">
+                        Error
+                    </span>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="col-sm-2 control-label">Telephone</label>
+                <div class="col-sm-10">
+                    <input
+                            th:field="*{telephone}"
+                            class="form-control"
+                            th:classappend="${#fields.hasErrors('telephone')} ? 'is-invalid'"
+                            id="telephone"
+                            type="tel"
+                            minlength="10"
+                            maxlength="15"
+                            pattern="[0-9]{10,15}"
+                    />
+                    <span class="invalid-feedback" th:if="${#fields.hasErrors('telephone')}" th:errors="*{telephone}">
+                        Error
+                    </span>
+                    <span id="telephone-client-error" class="invalid-feedback" style="display: none;"></span>
+                </div>
+            </div>
+        </div>
+        <div class="form-group">
+            <div class="col-sm-offset-2 col-sm-10">
+                <button
+                        th:with="text=${owner['new']} ? 'Add Owner' : 'Update Owner'"
+                        class="btn btn-primary"
+                        type="submit"
+                >
+                    <th:block th:text="${text}"/>
+                </button>
+            </div>
+        </div>
+    </form>
+
+    <div th:replace="~{fragments/footer :: footer}"/>
+
+</div>
+</body>
 </html>
