@@ -19,6 +19,8 @@ import java.time.LocalDate;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.Set;
+import java.util.ArrayList; 
+import java.util.List; 
 
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.samples.petclinic.model.NamedEntity;
@@ -58,6 +60,9 @@ public class Pet extends NamedEntity {
 	@OrderBy("date ASC")
 	private final Set<Visit> visits = new LinkedHashSet<>();
 
+    @OneToMany(cascade = CascadeType.ALL, mappedBy = "pet", fetch = FetchType.EAGER)
+    private List<Vaccination> vaccinations = new ArrayList<>();
+
 	public void setBirthDate(LocalDate birthDate) {
 		this.birthDate = birthDate;
 	}
@@ -81,5 +86,16 @@ public class Pet extends NamedEntity {
 	public void addVisit(Visit visit) {
 		getVisits().add(visit);
 	}
+
+    public List<Vaccination> getVaccinations() {
+        return this.vaccinations;
+    }
+
+    public void addVaccination(Vaccination vaccination) {
+        if (vaccination.isNew()) {
+            getVaccinations().add(vaccination);
+            vaccination.setPet(this);
+        }
+    }
 
 }
