@@ -33,6 +33,7 @@ import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Email; 
 
 /**
  * Simple JavaBean domain object representing an owner.
@@ -60,6 +61,14 @@ public class Owner extends Person {
 	@NotBlank
 	@Pattern(regexp = "\\d{10}", message = "{telephone.invalid}")
 	private String telephone;
+
+    @Column(name = "email")
+    @Email
+    @NotBlank
+    private String email;
+
+    @Column(name = "receives_vaccination_reminders")
+    private boolean receivesVaccinationReminders = true; 
 
 	@OneToMany(cascade = CascadeType.ALL, fetch = FetchType.EAGER)
 	@JoinColumn(name = "owner_id")
@@ -89,6 +98,22 @@ public class Owner extends Person {
 	public void setTelephone(String telephone) {
 		this.telephone = telephone;
 	}
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public boolean getReceivesVaccinationReminders() {
+        return receivesVaccinationReminders;
+    }
+
+    public void setReceivesVaccinationReminders(boolean receivesVaccinationReminders) {
+        this.receivesVaccinationReminders = receivesVaccinationReminders;
+    }
 
 	public List<Pet> getPets() {
 		return this.pets;
@@ -153,6 +178,8 @@ public class Owner extends Person {
 			.append("address", this.address)
 			.append("city", this.city)
 			.append("telephone", this.telephone)
+            .append("email", this.email)
+            .append("receivesVaccinationReminders", this.receivesVaccinationReminders)
 			.toString();
 	}
 
