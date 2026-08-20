@@ -31,8 +31,8 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
-import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.NotBlank;
+import org.springframework.samples.petclinic.validation.ValidPhoneNumber; // New import
 
 /**
  * Simple JavaBean domain object representing an owner.
@@ -47,7 +47,6 @@ import jakarta.validation.constraints.NotBlank;
 @Entity
 @Table(name = "owners")
 public class Owner extends Person {
-
 	@Column
 	@NotBlank
 	private String address;
@@ -58,7 +57,7 @@ public class Owner extends Person {
 
 	@Column
 	@NotBlank
-	@Pattern(regexp = "\\d{10}", message = "{telephone.invalid}")
+	@ValidPhoneNumber // Replaced @Pattern
 	private String telephone;
 
 	@OneToMany(cascade = CascadeType.ALL, fetch = FetchType.EAGER)
