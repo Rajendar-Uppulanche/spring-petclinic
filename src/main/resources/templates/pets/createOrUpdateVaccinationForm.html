@@ -1,0 +1,69 @@
+<!-- src/main/resources/templates/pets/createOrUpdateVaccinationForm.html -->
+<!DOCTYPE html>
+<html xmlns:th="https://www.thymeleaf.org" th:replace="~{fragments/layout :: layout (~{::body},'owners')}">
+
+<body>
+
+  <div class="container-fluid">
+    <div class="row">
+      <div class="col-md-12">
+        <h2 th:if="${vaccination['new']}">New Vaccination</h2>
+        <h2 th:unless="${vaccination['new']}">Edit Vaccination</h2>
+        <form th:object="${vaccination}" class="form-horizontal" id="add-vaccination-form" method="post">
+          <div class="form-group has-feedback">
+            <div class="form-group">
+              <label class="col-sm-2 control-label">Pet</label>
+              <div class="col-sm-10">
+                <span th:text="${pet.name}" class="form-control-static"></span>
+              </div>
+            </div>
+            <div class="form-group" th:classappend="${#fields.hasErrors('vaccineType')} ? 'has-error'">
+              <label class="col-sm-2 control-label">Vaccine Type</label>
+              <div class="col-sm-10">
+                <select class="form-control" th:field="*{vaccineType}">
+                  <option th:each="type : ${vaccineTypes}" th:value="${type.id}" th:text="${type.name}"></option>
+                </select>
+                <span class="help-block" th:if="${#fields.hasErrors('vaccineType')}" th:errors="*{vaccineType}"></span>
+              </div>
+            </div>
+            <div class="form-group" th:classappend="${#fields.hasErrors('dateAdministered')} ? 'has-error'">
+              <label for="dateAdministered" class="col-sm-2 control-label">Date Administered</label>
+              <div class="col-sm-10">
+                <input th:field="*{dateAdministered}" type="date" class="form-control" id="dateAdministered" />
+                <span class="help-block" th:if="${#fields.hasErrors('dateAdministered')}" th:errors="*{dateAdministered}"></span>
+              </div>
+            </div>
+            <div class="form-group" th:classappend="${#fields.hasErrors('administeringVet')} ? 'has-error'">
+              <label for="administeringVet" class="col-sm-2 control-label">Administering Vet</label>
+              <div class="col-sm-10">
+                <input th:field="*{administeringVet}" class="form-control" id="administeringVet" />
+                <span class="help-block" th:if="${#fields.hasErrors('administeringVet')}" th:errors="*{administeringVet}"></span>
+              </div>
+            </div>
+            <div class="form-group" th:classappend="${#fields.hasErrors('batchNumber')} ? 'has-error'">
+              <label for="batchNumber" class="col-sm-2 control-label">Batch Number</label>
+              <div class="col-sm-10">
+                <input th:field="*{batchNumber}" class="form-control" id="batchNumber" />
+                <span class="help-block" th:if="${#fields.hasErrors('batchNumber')}" th:errors="*{batchNumber}"></span>
+              </div>
+            </div>
+            <div class="form-group" th:classappend="${#fields.hasErrors('nextDueDate')} ? 'has-error'">
+              <label for="nextDueDate" class="col-sm-2 control-label">Next Due Date</label>
+              <div class="col-sm-10">
+                <input th:field="*{nextDueDate}" type="date" class="form-control" id="nextDueDate" />
+                <span class="help-block" th:if="${#fields.hasErrors('nextDueDate')}" th:errors="*{nextDueDate}"></span>
+              </div>
+            </div>
+          </div>
+          <div class="form-group">
+            <div class="col-sm-offset-2 col-sm-10">
+              <button th:if="${vaccination['new']}" class="btn btn-default" type="submit">Add Vaccination</button>
+              <button th:unless="${vaccination['new']}" class="btn btn-default" type="submit">Update Vaccination</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
