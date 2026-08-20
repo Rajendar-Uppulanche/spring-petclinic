@@ -1,0 +1,189 @@
+openapi: 3.0.0
+info:
+  title: Pet Clinic Owners API
+  version: 1.0.0
+paths:
+  /owners:
+    get:
+      summary: Get all owners
+      responses:
+        '200':
+          description: A list of owners
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Owner'
+    post:
+      summary: Create a new owner
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OwnerCreateUpdate'
+      responses:
+        '201':
+          description: Owner created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Owner'
+        '400':
+          description: Invalid input
+        '409':
+          description: Conflict, e.g., owner with this user ID already exists
+  /owners/{ownerId}:
+    get:
+      summary: Get owner by ID
+      parameters:
+        - in: path
+          name: ownerId
+          schema:
+            type: integer
+          required: true
+          description: ID of the owner to retrieve
+      responses:
+        '200':
+          description: Owner found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Owner'
+        '404':
+          description: Owner not found
+    put:
+      summary: Update an existing owner
+      parameters:
+        - in: path
+          name: ownerId
+          schema:
+            type: integer
+          required: true
+          description: ID of the owner to update
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OwnerCreateUpdate'
+      responses:
+        '200':
+          description: Owner updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Owner'
+        '400':
+          description: Invalid input
+        '404':
+          description: Owner not found
+        '409':
+          description: Conflict, e.g., user ID cannot be changed or is already taken by another owner
+    delete:
+      summary: Delete an owner
+      parameters:
+        - in: path
+          name: ownerId
+          schema:
+            type: integer
+          required: true
+          description: ID of the owner to delete
+      responses:
+        '204':
+          description: Owner deleted successfully
+        '404':
+          description: Owner not found
+  /owners/by-user-id/{userId}:
+    get:
+      summary: Get owner by User ID
+      description: Retrieve an owner's details using their unique user ID. Requires ADMIN or STAFF role.
+      parameters:
+        - in: path
+          name: userId
+          schema:
+            type: string
+          required: true
+          description: Unique user ID of the owner to retrieve
+      responses:
+        '200':
+          description: Owner found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Owner'
+        '403':
+          description: Forbidden - User does not have ADMIN or STAFF role
+        '404':
+          description: Owner not found
+components:
+  schemas:
+    Owner:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        firstName:
+          type: string
+        lastName:
+          type: string
+        address:
+          type: string
+        city:
+          type: string
+        telephone:
+          type: string
+        userId:
+          type: string
+          description: Unique identifier for the user associated with this owner. Immutable once set.
+          nullable: true
+        pets:
+          type: array
+          items:
+            $ref: '#/components/schemas/Pet'
+    OwnerCreateUpdate:
+      type: object
+      properties:
+        firstName:
+          type: string
+        lastName:
+          type: string
+        address:
+          type: string
+        city:
+          type: string
+        telephone:
+          type: string
+        userId:
+          type: string
+          description: Unique identifier for the user associated with this owner. Immutable once set.
+          nullable: true
+      required:
+        - firstName
+        - lastName
+        - address
+        - city
+        - telephone
+    Pet:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+        birthDate:
+          type: string
+          format: date
+        type:
+          $ref: '#/components/schemas/PetType'
+    PetType:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
