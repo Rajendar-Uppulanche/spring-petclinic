@@ -22,6 +22,7 @@ import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.samples.petclinic.vaccination.VaccinationService; // Import new service
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -51,9 +52,11 @@ class OwnerController {
 	private static final String VIEWS_OWNER_CREATE_OR_UPDATE_FORM = "owners/createOrUpdateOwnerForm";
 
 	private final OwnerRepository owners;
+	private final VaccinationService vaccinationService; // Inject VaccinationService
 
-	public OwnerController(OwnerRepository owners) {
+	public OwnerController(OwnerRepository owners, VaccinationService vaccinationService) { // Update constructor
 		this.owners = owners;
+		this.vaccinationService = vaccinationService;
 	}
 
 	@InitBinder
@@ -63,10 +66,13 @@ class OwnerController {
 
 	@ModelAttribute("owner")
 	public Owner findOwner(@PathVariable(name = "ownerId", required = false) Integer ownerId) {
-		return ownerId == null ? new Owner()
+		Owner owner = ownerId == null ? new Owner()
 				: this.owners.findById(ownerId)
 					.orElseThrow(() -> new IllegalArgumentException("Owner not found with id: " + ownerId
 							+ ". Please ensure the ID is correct " + "and the owner exists in the database."));
+		// Calculate overdue status for each pet
+		owner.getPets().forEach(pet -> pet.setOverdueForVaccination(vaccinationService.isPetOverdueForVaccination(pet)));
+		return owner;
 	}
 
 	@GetMapping("/owners/new")
@@ -123,6 +129,8 @@ class OwnerController {
 
 	private String addPaginationModel(int page, Model model, Page<Owner> paginated) {
 		List<Owner> listOwners = paginated.getContent();
+		// Calculate overdue status for each pet in the list
+		listOwners.forEach(owner -> owner.getPets().forEach(pet -> pet.setOverdueForVaccination(vaccinationService.isPetOverdueForVaccination(pet))));
 		model.addAttribute("currentPage", page);
 		model.addAttribute("totalPages", paginated.getTotalPages());
 		model.addAttribute("totalItems", paginated.getTotalElements());
@@ -172,6 +180,7 @@ class OwnerController {
 		Optional<Owner> optionalOwner = this.owners.findById(ownerId);
 		Owner owner = optionalOwner.orElseThrow(() -> new IllegalArgumentException(
 				"Owner not found with id: " + ownerId + ". Please ensure the ID is correct "));
+		// The @ModelAttribute("owner") method already handles setting overdue status
 		mav.addObject(owner);
 		return mav;
 	}
