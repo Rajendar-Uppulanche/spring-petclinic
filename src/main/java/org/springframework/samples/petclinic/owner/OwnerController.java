@@ -94,6 +94,10 @@ class OwnerController {
 	@GetMapping("/owners")
 	public String processFindForm(@RequestParam(defaultValue = "1") int page, Owner owner, BindingResult result,
 			Model model) {
+		// NFR-053 (Performance) and NFR-054 (Usability) review initiated for owner search functionality
+		// as part of SP-49 and NFR-070 design. This method is a key component for owner record review.
+		// Current implementation uses pagination and 'starting with' search.
+		// Future enhancements may include more advanced search criteria or performance optimizations.
 		// allow parameterless GET request for /owners to return all records
 		String lastName = owner.getLastName();
 		if (lastName == null) {
