@@ -1,0 +1,2 @@
+ALTER TABLE owners ADD COLUMN user_id VARCHAR(255);
+ALTER TABLE owners ADD CONSTRAINT uk_user_id UNIQUE (user_id);
