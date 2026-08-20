@@ -18,6 +18,8 @@ package org.springframework.samples.petclinic.owner;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Map;
+import java.util.HashMap;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -173,6 +175,14 @@ class OwnerController {
 		Owner owner = optionalOwner.orElseThrow(() -> new IllegalArgumentException(
 				"Owner not found with id: " + ownerId + ". Please ensure the ID is correct "));
 		mav.addObject(owner);
+
+		// SP-50: Calculate and add total visit counts for each pet
+		Map<Integer, Integer> petVisitCounts = new HashMap<>();
+		for (Pet pet : owner.getPets()) {
+			petVisitCounts.put(pet.getId(), pet.getVisits().size());
+		}
+		mav.addObject("petVisitCounts", petVisitCounts);
+
 		return mav;
 	}
 
