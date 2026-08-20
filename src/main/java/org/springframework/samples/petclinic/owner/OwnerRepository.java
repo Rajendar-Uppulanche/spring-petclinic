@@ -20,9 +20,10 @@ import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 
 /**
- * Repository class for <code>Owner</code> domain objects. All method names are compliant
+ * Repository class for `Owner` domain objects. All method names are compliant
  * with Spring Data naming conventions so this interface can easily be extended for Spring
  * Data. See:
  * https://docs.spring.io/spring-data/jpa/docs/current/reference/html/#repositories.query-methods.query-creation
@@ -34,6 +35,17 @@ import org.springframework.data.jpa.repository.JpaRepository;
  * @author Wick Dynex
  */
 public interface OwnerRepository extends JpaRepository<Owner, Integer> {
+
+	/**
+	 * Retrieve `Owner`s from the data store by last name or telephone number.
+	 * The search term is matched against the start of the last name (case-insensitive)
+	 * or an exact match against the telephone number.
+	 * @param searchTerm Value to search for (last name fragment or telephone number)
+	 * @param pageable Pagination information
+	 * @return a Page of matching `Owner`s (or an empty Page if none found)
+	 */
+	@Query("SELECT DISTINCT owner FROM Owner owner WHERE LOWER(owner.lastName) LIKE LOWER(CONCAT(?1, '%')) OR owner.telephone = ?1")
+	Page<Owner> findByLastNameStartingWithIgnoreCaseOrTelephone(String searchTerm, Pageable pageable);
 
 	/**
 	 * Retrieve {@link Owner}s from the data store by last name, returning all owners
