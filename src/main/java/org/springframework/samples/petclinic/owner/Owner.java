@@ -61,6 +61,9 @@ public class Owner extends Person {
 	@Pattern(regexp = "\\d{10}", message = "{telephone.invalid}")
 	private String telephone;
 
+	@Column(name = "receives_vaccination_reminders")
+	private Boolean receivesVaccinationReminders = true;
+
 	@OneToMany(cascade = CascadeType.ALL, fetch = FetchType.EAGER)
 	@JoinColumn(name = "owner_id")
 	@OrderBy("name")
@@ -88,6 +91,14 @@ public class Owner extends Person {
 
 	public void setTelephone(String telephone) {
 		this.telephone = telephone;
+	}
+
+	public Boolean getReceivesVaccinationReminders() {
+		return this.receivesVaccinationReminders;
+	}
+
+	public void setReceivesVaccinationReminders(Boolean receivesVaccinationReminders) {
+		this.receivesVaccinationReminders = receivesVaccinationReminders;
 	}
 
 	public List<Pet> getPets() {
@@ -153,6 +164,7 @@ public class Owner extends Person {
 			.append("address", this.address)
 			.append("city", this.city)
 			.append("telephone", this.telephone)
+			.append("receivesVaccinationReminders", this.receivesVaccinationReminders)
 			.toString();
 	}
 
