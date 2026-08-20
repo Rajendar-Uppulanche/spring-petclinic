@@ -63,6 +63,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class OwnerControllerTests {
 
 	private static final int TEST_OWNER_ID = 1;
+	private static final int TEST_PET_ID_MAX = 1;
+	private static final int TEST_PET_ID_FLUFFY = 2;
 
 	@Autowired
 	private MockMvc mockMvc;
@@ -78,14 +80,27 @@ class OwnerControllerTests {
 		george.setAddress("110 W. Liberty St.");
 		george.setCity("Madison");
 		george.setTelephone("6085551023");
+
+		// Pet with visits
 		Pet max = new Pet();
 		PetType dog = new PetType();
 		dog.setName("dog");
 		max.setType(dog);
 		max.setName("Max");
-		max.setBirthDate(LocalDate.now());
+		max.setBirthDate(LocalDate.now().minusYears(2));
+		max.setId(TEST_PET_ID_MAX);
 		george.addPet(max);
-		max.setId(1);
+
+		// Pet without visits
+		Pet fluffy = new Pet();
+		PetType cat = new PetType();
+		cat.setName("cat");
+		fluffy.setType(cat);
+		fluffy.setName("Fluffy");
+		fluffy.setBirthDate(LocalDate.now().minusYears(1));
+		fluffy.setId(TEST_PET_ID_FLUFFY);
+		george.addPet(fluffy);
+
 		return george;
 	}
 
@@ -97,9 +112,12 @@ class OwnerControllerTests {
 			.willReturn(new PageImpl<>(List.of(george)));
 
 		given(this.owners.findById(TEST_OWNER_ID)).willReturn(Optional.of(george));
-		Visit visit = new Visit();
-		visit.setDate(LocalDate.now());
-		george.getPet("Max").getVisits().add(visit);
+
+		// Add a visit to Max
+		Visit visitMax = new Visit();
+		visitMax.setDate(LocalDate.now());
+		visitMax.setDescription("Routine checkup");
+		george.getPet("Max").getVisits().add(visitMax);
 
 	}
 
@@ -227,8 +245,7 @@ class OwnerControllerTests {
 			.andExpect(view().name("redirect:/owners/{ownerId}"));
 	}
 
-	@Test
-	void processUpdateOwnerFormHasErrors() throws Exception {
+	@Test	void processUpdateOwnerFormHasErrors() throws Exception {
 		mockMvc
 			.perform(post("/owners/{ownerId}/edit", TEST_OWNER_ID).param("firstName", "Joe")
 				.param("lastName", "Bloggs")
@@ -253,7 +270,11 @@ class OwnerControllerTests {
 			.andExpect(model().attribute("owner", hasProperty("pets", not(empty()))))
 			.andExpect(model().attribute("owner",
 					hasProperty("pets", hasItem(hasProperty("visits", hasSize(greaterThan(0)))))))
-			.andExpect(view().name("owners/ownerDetails"));
+			.andExpect(view().name("owners/ownerDetails"))
+			.andExpect(content().string(org.hamcrest.Matchers.containsString("<td>Max</td>")))
+			.andExpect(content().string(org.hamcrest.Matchers.containsString("<td>1</td>"))) // Max has 1 visit
+			.andExpect(content().string(org.hamcrest.Matchers.containsString("<td>Fluffy</td>")))
+			.andExpect(content().string(org.hamcrest.Matchers.containsString("<td>0</td>"))); // Fluffy has 0 visits
 	}
 
 	@Test
