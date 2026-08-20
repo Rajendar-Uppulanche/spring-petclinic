@@ -1,0 +1,135 @@
+<!-- Assuming existing ownerDetails.html content, adding vaccination section -->
+<!DOCTYPE html>
+<html xmlns:th="https://www.thymeleaf.org" th:replace="~{fragments/layout :: layout (~{::body},'owners')}">
+
+<body>
+
+  <h2>Owner Information</h2>
+
+
+  <table class="table table-striped" th:object="${owner}">
+    <tr>
+      <th>Name</th>
+      <td><b th:text="*{firstName + ' ' + lastName}"></b></td>
+    </tr>
+    <tr>
+      <th>Address</th>
+      <td th:text="*{address}" />
+    </tr>
+    <tr>
+      <th>City</th>
+      <td th:text="*{city}" />
+    </tr>
+    <tr>
+      <th>Telephone</th>
+      <td th:text="*{telephone}" />
+    </tr>
+  </table>
+
+  <a th:href="@{/owners/__${owner.id}__/edit}" class="btn btn-default">Edit Owner</a>
+  <a th:href="@{/owners/__${owner.id}__/pets/new}" class="btn btn-default">Add New Pet</a>
+
+  <br/>
+  <br/>
+  <h2>Pets and Visits</h2>
+
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <th style="width: 150px;">Name</th>
+        <th style="width: 200px;">Birth Date</th>
+        <th style="width: 150px;">Type</th>
+        <th style="width: 150px;">Vaccination Status</th> <!-- New column -->
+        <th style="width: 150px;"></th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr th:each="pet : ${owner.pets}">
+        <td th:text="${pet.name}"></td>
+        <td th:text="${#temporals.format(pet.birthDate, 'yyyy-MM-dd')}"></td>
+        <td th:text="${pet.type.name}"></td>
+        <td>
+            <span th:if="${pet.overdueForVaccination}" class="overdue-vaccination">OVERDUE</span>
+            <span th:unless="${pet.overdueForVaccination}">Up-to-date</span>
+        </td>
+        <td>
+          <a th:href="@{/owners/__${owner.id}__/pets/__${pet.id}__/edit}">Edit Pet</a>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <br/>
+  <h2>Pet Details</h2>
+  <div th:each="pet : ${owner.pets}" class="panel panel-default">
+    <div class="panel-heading">
+      <h3 class="panel-title">
+        <span th:text="${pet.name}"></span>
+        <span th:if="${pet.overdueForVaccination}" class="overdue-vaccination-badge">OVERDUE</span>
+      </h3>
+    </div>
+    <div class="panel-body">
+      <table class="table table-striped">
+        <tr>
+          <th>Birth Date</th>
+          <td th:text="${#temporals.format(pet.birthDate, 'yyyy-MM-dd')}" />
+        </tr>
+        <tr>
+          <th>Type</th>
+          <td th:text="${pet.type.name}" />
+        </tr>
+        <tr>
+          <th>Visits</th>
+          <td>
+            <table class="table-condensed">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Description</th>
+                </tr>
+              </thead>
+              <tr th:each="visit : ${pet.visits}">
+                <td th:text="${#temporals.format(visit.date, 'yyyy-MM-dd')}" />
+                <td th:text="${visit.description}" />
+              </tr>
+            </table>
+            <a th:href="@{/owners/__${owner.id}__/pets/__${pet.id}__/visits/new}" class="btn btn-default">Add Visit</a>
+          </td>
+        </tr>
+        <!-- New section for Vaccinations -->
+        <tr>
+          <th>Vaccinations</th>
+          <td>
+            <table class="table-condensed">
+              <thead>
+                <tr>
+                  <th>Date Administered</th>
+                  <th>Vaccine Type</th>
+                  <th>Administering Vet</th>
+                  <th>Batch Number</th>
+                  <th>Next Due Date</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tr th:each="vaccination : ${pet.vaccinations}">
+                <td th:text="${#temporals.format(vaccination.dateAdministered, 'yyyy-MM-dd')}" />
+                <td th:text="${vaccination.vaccineType.name}" />
+                <td th:text="${vaccination.administeringVet}" />
+                <td th:text="${vaccination.batchNumber}" />
+                <td th:text="${#temporals.format(vaccination.nextDueDate, 'yyyy-MM-dd')}" />
+                <td>
+                    <a th:href="@{/owners/__${owner.id}__/pets/__${pet.id}__/vaccinations/__${vaccination.id}__/edit}" class="btn btn-default btn-xs">Edit</a>
+                    <form th:action="@{/owners/__${owner.id}__/pets/__${pet.id}__/vaccinations/__${vaccination.id}__/delete}" method="post" style="display:inline;">
+                        <button type="submit" class="btn btn-danger btn-xs" onclick="return confirm('Are you sure you want to delete this vaccination record?');">Delete</button>
+                    </form>
+                </td>
+              </tr>
+            </table>
+            <a th:href="@{/owners/__${owner.id}__/pets/__${pet.id}__/vaccinations/new}" class="btn btn-default">Add Vaccination</a>
+          </td>
+        </tr>
+      </table>
+    </div>
+  </div>
+</body>
+</html>

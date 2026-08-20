@@ -201,10 +201,10 @@ class PetControllerTests {
 	@Test
 	void processUpdateFormWithSameName() throws Exception {
 		mockMvc.perform(post("/owners/{ownerId}/pets/{petId}/edit", TEST_OWNER_ID, TEST_PET_ID).param("name", "petty") // same
-																														// name
-																														// as
-																														// existing
-																														// pet
+																																								// name
+																																								// as
+																																								// existing
+																																								// pet
 			.param("type", "hamster")
 			.param("birthDate", "2015-02-12"))
 			.andExpect(status().is3xxRedirection())
