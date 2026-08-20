@@ -1,0 +1,132 @@
+package org.springframework.samples.petclinic.model;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.Table;
+import jakarta.validation.constraints.Digits;
+import jakarta.validation.constraints.NotEmpty;
+
+import org.springframework.beans.support.MutableSortDefinition;
+import org.springframework.beans.support.PropertyComparator;
+
+/**
+ * Simple JavaBean domain object representing an owner.
+ *
+ * @author Ken Krebs
+ * @author Juergen Hoeller
+ * @author Sam Brannen
+ * @author Maciej Walkowiak
+ */
+@Entity
+@Table(name = "owners")
+public class Owner extends Person {
+
+	@Column(name = "address")
+	@NotEmpty
+	private String address;
+
+	@Column(name = "city")
+	@NotEmpty
+	private String city;
+
+	@Column(name = "telephone")
+	@NotEmpty
+	@Digits(fraction = 0, integer = 10)
+	private String telephone;
+
+	@OneToMany(cascade = CascadeType.ALL, mappedBy = "owner")
+	private Set<Pet> pets;
+
+	@Column(name = "unsubscribe_preference")
+	private boolean unsubscribePreference;
+
+	public String getAddress() {
+		return this.address;
+	}
+
+	public void setAddress(String address) {
+		this.address = address;
+	}
+
+	public String getCity() {
+		return this.city;
+	}
+
+	public void setCity(String city) {
+		this.city = city;
+	}
+
+	public String getTelephone() {
+		return this.telephone;
+	}
+
+	public void setTelephone(String telephone) {
+		this.telephone = telephone;
+	}
+
+	protected Set<Pet> getPetsInternal() {
+		if (this.pets == null) {
+			this.pets = new HashSet<>();
+		}
+		return this.pets;
+	}
+
+	protected void setPetsInternal(Set<Pet> pets) {
+		this.pets = pets;
+	}
+
+	public List<Pet> getPets() {
+		List<Pet> sortedPets = new ArrayList<>(getPetsInternal());
+		PropertyComparator.sort(sortedPets, new MutableSortDefinition("name", true, true));
+		return Collections.unmodifiableList(sortedPets);
+	}
+
+	public void addPet(Pet pet) {
+		getPetsInternal().add(pet);
+		pet.setOwner(this);
+	}
+
+	/**
+	 * Return the Pet with the given name, or null if none found for this Owner.
+	 * @param name to match
+	 * @return the Pet if found, or null otherwise
+	 */
+	public Pet getPet(String name) {
+		return getPet(name, false);
+	}
+
+	/**
+	 * Return the Pet with the given name, or null if none found for this Owner.
+	 * @param name to match
+	 * @param ignoreNew whether to ignore new Pet objects in the search
+	 * @return the Pet if found, or null otherwise
+	 */
+	public Pet getPet(String name, boolean ignoreNew) {
+		name = name.toLowerCase();
+		for (Pet pet : getPetsInternal()) {
+			if (!ignoreNew || !pet.isNew()) {
+				if (name.equals(pet.getName().toLowerCase())) {
+					return pet;
+				}
+			}
+		}
+		return null;
+	}
+
+	public boolean isUnsubscribePreference() {
+		return unsubscribePreference;
+	}
+
+	public void setUnsubscribePreference(boolean unsubscribePreference) {
+		this.unsubscribePreference = unsubscribePreference;
+	}
+
+}
