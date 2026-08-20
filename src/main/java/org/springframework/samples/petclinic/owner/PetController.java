@@ -15,7 +15,7 @@
  */
 package org.springframework.samples.petclinic.owner;
 
-import java.time.LocalDate;
+// import java.time.LocalDate;
 import java.util.Collection;
 import java.util.Objects;
 import java.util.Optional;
@@ -112,10 +112,11 @@ class PetController {
 			result.rejectValue("name", "duplicate", "already exists");
 		}
 
-		LocalDate currentDate = LocalDate.now();
-		if (pet.getBirthDate() != null && pet.getBirthDate().isAfter(currentDate)) {
-			result.rejectValue("birthDate", "typeMismatch.birthDate");
-		}
+		// Removed manual future birth date check, now handled by PetValidator
+		// LocalDate currentDate = LocalDate.now();
+		// if (pet.getBirthDate() != null && pet.getBirthDate().isAfter(currentDate)) {
+		// 	result.rejectValue("birthDate", "typeMismatch.birthDate");
+		// }
 
 		if (result.hasErrors()) {
 			return VIEWS_PETS_CREATE_OR_UPDATE_FORM;
@@ -155,10 +156,11 @@ class PetController {
 			}
 		}
 
-		LocalDate currentDate = LocalDate.now();
-		if (pet.getBirthDate() != null && pet.getBirthDate().isAfter(currentDate)) {
-			result.rejectValue("birthDate", "typeMismatch.birthDate");
-		}
+		// Removed manual future birth date check, now handled by PetValidator
+		// LocalDate currentDate = LocalDate.now();
+		// if (pet.getBirthDate() != null && pet.getBirthDate().isAfter(currentDate)) {
+		// 	result.rejectValue("birthDate", "typeMismatch.birthDate");
+		// }
 
 		if (result.hasErrors()) {
 			return VIEWS_PETS_CREATE_OR_UPDATE_FORM;
