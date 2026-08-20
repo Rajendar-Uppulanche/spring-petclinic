@@ -22,7 +22,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 /**
- * Repository class for <code>Owner</code> domain objects. All method names are compliant
+ * Repository class for `Owner` domain objects. All method names are compliant
  * with Spring Data naming conventions so this interface can easily be extended for Spring
  * Data. See:
  * https://docs.spring.io/spring-data/jpa/docs/current/reference/html/#repositories.query-methods.query-creation
@@ -38,6 +38,10 @@ public interface OwnerRepository extends JpaRepository<Owner, Integer> {
 	/**
 	 * Retrieve {@link Owner}s from the data store by last name, returning all owners
 	 * whose last name <i>starts</i> with the given name.
+	 *	
+	 * NFR-053 (Performance) and NFR-054 (Usability) review initiated for owner search functionality
+	 * as part of SP-49 and NFR-070 design. This method is a key component.
+	 *
 	 * @param lastName Value to search for
 	 * @return a Collection of matching {@link Owner}s (or an empty Collection if none
 	 * found)
