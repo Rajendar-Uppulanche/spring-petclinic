@@ -58,8 +58,14 @@ public class Owner extends Person {
 
 	@Column
 	@NotBlank
-	@Pattern(regexp = "\\d{10}", message = "{telephone.invalid}")
+	@Pattern(regexp = "^(\\+\\d{1,3}[- ]?)?(\\(\\d{2,4}\\)|\\d{2,4})?[- ]?(\\d{2,4}[- ]?){1,2}\\d{2,4}$", message = "{telephone.invalid}")
 	private String telephone;
+
+	@Column(name = "contact_preference")
+	private String contactPreference;
+
+	@Column(name = "notes")
+	private String notes;
 
 	@OneToMany(cascade = CascadeType.ALL, fetch = FetchType.EAGER)
 	@JoinColumn(name = "owner_id")
@@ -88,6 +94,22 @@ public class Owner extends Person {
 
 	public void setTelephone(String telephone) {
 		this.telephone = telephone;
+	}
+
+	public String getContactPreference() {
+		return contactPreference;
+	}
+
+	public void setContactPreference(String contactPreference) {
+		this.contactPreference = contactPreference;
+	}
+
+	public String getNotes() {
+		return notes;
+	}
+
+	public void setNotes(String notes) {
+		this.notes = notes;
 	}
 
 	public List<Pet> getPets() {
@@ -153,6 +175,8 @@ public class Owner extends Person {
 			.append("address", this.address)
 			.append("city", this.city)
 			.append("telephone", this.telephone)
+			.append("contactPreference", this.contactPreference)
+			.append("notes", this.notes)
 			.toString();
 	}
 
