@@ -1,0 +1,2 @@
+feature_flags:
+  SOME_OTHER_FEATURE: false
