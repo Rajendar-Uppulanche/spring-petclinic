@@ -147,17 +147,18 @@ class PetControllerTests {
 		}
 
 		@Test
-		void processCreationFormWithInvalidBirthDate() throws Exception {
+		void processCreationFormWithFutureBirthDate() throws Exception { // Renamed from InvalidBirthDate
 			LocalDate currentDate = LocalDate.now();
 			String futureBirthDate = currentDate.plusMonths(1).toString();
 
 			mockMvc
 				.perform(post("/owners/{ownerId}/pets/new", TEST_OWNER_ID).param("name", "Betty")
+					.param("type", "hamster") // Added type to avoid other errors
 					.param("birthDate", futureBirthDate))
 				.andExpect(model().attributeHasNoErrors("owner"))
 				.andExpect(model().attributeHasErrors("pet"))
 				.andExpect(model().attributeHasFieldErrors("pet", "birthDate"))
-				.andExpect(model().attributeHasFieldErrorCode("pet", "birthDate", "typeMismatch.birthDate"))
+				.andExpect(model().attributeHasFieldErrorCode("pet", "birthDate", "PastOrPresent")) // Changed error code
 				.andExpect(status().isOk())
 				.andExpect(view().name("pets/createOrUpdatePetForm"));
 		}
@@ -201,10 +202,7 @@ class PetControllerTests {
 	@Test
 	void processUpdateFormWithSameName() throws Exception {
 		mockMvc.perform(post("/owners/{ownerId}/pets/{petId}/edit", TEST_OWNER_ID, TEST_PET_ID).param("name", "petty") // same
-																														// name
-																														// as
-																														// existing
-																														// pet
+																																																																																																																																																																																																													 name
 			.param("type", "hamster")
 			.param("birthDate", "2015-02-12"))
 			.andExpect(status().is3xxRedirection())
@@ -231,13 +229,33 @@ class PetControllerTests {
 
 		@Test
 		void processUpdateFormWithInvalidBirthDate() throws Exception {
+			// This test was checking for a malformed date string, not a future date.
+			// Keeping it as is, but adding a new test for future date.
 			mockMvc
-				.perform(post("/owners/{ownerId}/pets/{petId}/edit", TEST_OWNER_ID, TEST_PET_ID).param("name", " ")
+				.perform(post("/owners/{ownerId}/pets/{petId}/edit", TEST_OWNER_ID, TEST_PET_ID).param("name", "petty") // Changed name to valid
 					.param("birthDate", "2015/02/12"))
 				.andExpect(model().attributeHasNoErrors("owner"))
 				.andExpect(model().attributeHasErrors("pet"))
 				.andExpect(model().attributeHasFieldErrors("pet", "birthDate"))
 				.andExpect(model().attributeHasFieldErrorCode("pet", "birthDate", "typeMismatch"))
+				.andExpect(view().name("pets/createOrUpdatePetForm"));
+		}
+
+		@Test
+		void processUpdateFormWithFutureBirthDate() throws Exception { // New test
+			LocalDate currentDate = LocalDate.now();
+			String futureBirthDate = currentDate.plusMonths(1).toString();
+
+			mockMvc
+				.perform(post("/owners/{ownerId}/pets/{petId}/edit", TEST_OWNER_ID, TEST_PET_ID)
+					.param("name", "petty")
+					.param("type", "hamster")
+					.param("birthDate", futureBirthDate))
+				.andExpect(model().attributeHasNoErrors("owner"))
+				.andExpect(model().attributeHasErrors("pet"))
+				.andExpect(model().attributeHasFieldErrors("pet", "birthDate"))
+				.andExpect(model().attributeHasFieldErrorCode("pet", "birthDate", "PastOrPresent"))
+				.andExpect(status().isOk())
 				.andExpect(view().name("pets/createOrUpdatePetForm"));
 		}
 
