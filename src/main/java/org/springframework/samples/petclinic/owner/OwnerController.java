@@ -16,8 +16,10 @@
 package org.springframework.samples.petclinic.owner;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -173,6 +175,12 @@ class OwnerController {
 		Owner owner = optionalOwner.orElseThrow(() -> new IllegalArgumentException(
 				"Owner not found with id: " + ownerId + ". Please ensure the ID is correct "));
 		mav.addObject(owner);
+
+		// Calculate and add pet visit counts to the model
+		Map<Integer, Long> petVisitCounts = owner.getPets().stream()
+				.collect(Collectors.toMap(Pet::getId, pet -> (long) pet.getVisits().size()));
+		mav.addObject("petVisitCounts", petVisitCounts);
+
 		return mav;
 	}
 
