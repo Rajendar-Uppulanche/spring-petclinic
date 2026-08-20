@@ -173,4 +173,16 @@ public class Owner extends Person {
 		pet.addVisit(visit);
 	}
 
+	/**
+	 * Returns the total number of visits for the pet with the given identifier.
+	 * @param petId the identifier of the {@link Pet}, must not be {@literal null}.
+	 * @return the total number of visits for the specified pet, or 0 if the pet is not found or has no visits.
+	 */
+	public int getPetVisitCount(Integer petId) {
+		Pet pet = getPet(petId);
+		// Assuming Pet has a getVisits() method that returns a Collection or List of visits.
+		// We assume getVisits() returns a non-null collection (possibly empty).
+		return (pet != null) ? pet.getVisits().size() : 0;
+	}
+
 }
