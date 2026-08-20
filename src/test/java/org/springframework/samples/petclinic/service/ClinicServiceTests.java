@@ -312,4 +312,37 @@ class ClinicServiceTests {
 		assertThat(owner2.getPet("samepetname")).isNotNull();
 	}
 
+	@Test
+	@Transactional
+	void shouldFindOwnerWithPetsAndVisitsEagerly() {
+		// Owner 1 (George Franklin) has 1 pet (Leo), Leo has 2 visits
+		Optional<Owner> optionalOwner = this.owners.findOwnerWithPetsAndVisits(1);
+		assertThat(optionalOwner).isPresent();
+		Owner owner = optionalOwner.get();
+
+		assertThat(owner.getLastName()).isEqualTo("Franklin");
+		assertThat(owner.getPets()).hasSize(1);
+
+		Pet pet = owner.getPets().get(0);
+		assertThat(pet.getName()).isEqualTo("Leo");
+		// Verify visits are loaded and count is correct
+		assertThat(pet.getVisits()).hasSize(2);
+
+		// Owner 6 (Jeanette Lim) has 2 pets (Samantha, Max), Samantha has 2 visits, Max has 0 visits
+		optionalOwner = this.owners.findOwnerWithPetsAndVisits(6);
+		assertThat(optionalOwner).isPresent();
+		Owner owner = optionalOwner.get();
+
+		assertThat(owner.getLastName()).isEqualTo("Lim");
+		assertThat(owner.getPets()).hasSize(2);
+
+		Pet samantha = owner.getPet("Samantha");
+		assertThat(samantha).isNotNull();
+		assertThat(samantha.getVisits()).hasSize(2);
+
+		Pet max = owner.getPet("Max");
+		assertThat(max).isNotNull();
+		assertThat(max.getVisits()).hasSize(0); // Max has no visits
+	}
+
 }
