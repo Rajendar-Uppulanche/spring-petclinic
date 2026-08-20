@@ -51,9 +51,11 @@ class OwnerController {
 	private static final String VIEWS_OWNER_CREATE_OR_UPDATE_FORM = "owners/createOrUpdateOwnerForm";
 
 	private final OwnerRepository owners;
+	private final OwnerService ownerService; // Inject OwnerService
 
-	public OwnerController(OwnerRepository owners) {
+	public OwnerController(OwnerRepository owners, OwnerService ownerService) {
 		this.owners = owners;
+		this.ownerService = ownerService;
 	}
 
 	@InitBinder
@@ -63,6 +65,8 @@ class OwnerController {
 
 	@ModelAttribute("owner")
 	public Owner findOwner(@PathVariable(name = "ownerId", required = false) Integer ownerId) {
+		// This method is used for create/update forms, not for displaying owner details.
+		// The showOwner method will use OwnerService to fetch details.
 		return ownerId == null ? new Owner()
 				: this.owners.findById(ownerId)
 					.orElseThrow(() -> new IllegalArgumentException("Owner not found with id: " + ownerId
@@ -169,10 +173,8 @@ class OwnerController {
 	@GetMapping("/owners/{ownerId}")
 	public ModelAndView showOwner(@PathVariable("ownerId") int ownerId) {
 		ModelAndView mav = new ModelAndView("owners/ownerDetails");
-		Optional<Owner> optionalOwner = this.owners.findById(ownerId);
-		Owner owner = optionalOwner.orElseThrow(() -> new IllegalArgumentException(
-				"Owner not found with id: " + ownerId + ". Please ensure the ID is correct "));
-		mav.addObject(owner);
+		OwnerDetailsDTO ownerDetails = ownerService.findOwnerDetailsById(ownerId); // Use OwnerService
+		mav.addObject("owner", ownerDetails); // Add DTO to model
 		return mav;
 	}
 
