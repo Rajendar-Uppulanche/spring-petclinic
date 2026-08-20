@@ -32,6 +32,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.PastOrPresent;
 
 /**
  * Simple business object representing a pet.
@@ -47,6 +48,7 @@ public class Pet extends NamedEntity {
 
 	@Column
 	@DateTimeFormat(pattern = "yyyy-MM-dd")
+	@PastOrPresent
 	private LocalDate birthDate;
 
 	@ManyToOne
