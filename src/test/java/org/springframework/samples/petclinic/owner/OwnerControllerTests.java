@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      https://www.apache.org/licenses/LICENSE-2.0
+ *      https://www.apache.org/licenses/LICENSE-20.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -119,6 +119,17 @@ class OwnerControllerTests {
 				.param("address", "123 Caramel Street")
 				.param("city", "London")
 				.param("telephone", "1316761638"))
+			.andExpect(status().is3xxRedirection());
+	}
+
+	@Test
+	void processCreationFormWithFormattedTelephoneSuccess() throws Exception {
+		mockMvc
+			.perform(post("/owners/new").param("firstName", "Jane")
+				.param("lastName", "Doe")
+				.param("address", "456 Oak Avenue")
+				.param("city", "Springfield")
+				.param("telephone", "123-456-7890")) // Using formatted telephone
 			.andExpect(status().is3xxRedirection());
 	}
 
