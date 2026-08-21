@@ -42,6 +42,9 @@ public class Visit extends BaseEntity {
 	@NotBlank
 	private String description;
 
+	@Column(name = "weight")
+	private Double weight; // New field for pet's weight
+
 	/**
 	 * Creates a new instance of Visit for tomorrow
 	 */
@@ -63,6 +66,14 @@ public class Visit extends BaseEntity {
 
 	public void setDescription(String description) {
 		this.description = description;
+	}
+
+	public Double getWeight() {
+		return weight;
+	}
+
+	public void setWeight(Double weight) {
+		this.weight = weight;
 	}
 
 }

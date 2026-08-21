@@ -20,7 +20,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledInNativeImage;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -91,16 +91,25 @@ class OwnerControllerTests {
 
 	@BeforeEach
 	void setup() {
-
 		Owner george = george();
 		given(this.owners.findByLastNameStartingWith(eq("Franklin"), any(Pageable.class)))
 			.willReturn(new PageImpl<>(List.of(george)));
 
-		given(this.owners.findById(TEST_OWNER_ID)).willReturn(Optional.of(george));
-		Visit visit = new Visit();
-		visit.setDate(LocalDate.now());
-		george.getPet("Max").getVisits().add(visit);
+		// Setup for showOwner tests
+		Owner ownerWithVisits = george();
+		Visit visitWithWeight = new Visit();
+		visitWithWeight.setDate(LocalDate.now().plusDays(1));
+		visitWithWeight.setDescription("Routine checkup with weight");
+		visitWithWeight.setWeight(12.5); // Add weight to one visit
+		ownerWithVisits.getPet("Max").addVisit(visitWithWeight);
 
+		Visit visitWithoutWeight = new Visit();
+		visitWithoutWeight.setDate(LocalDate.now().minusDays(10));
+		visitWithoutWeight.setDescription("Vaccination without weight");
+		// No weight for this visit
+		ownerWithVisits.getPet("Max").addVisit(visitWithoutWeight);
+
+		given(this.owners.findById(TEST_OWNER_ID)).willReturn(Optional.of(ownerWithVisits));
 	}
 
 	@Test
@@ -274,6 +283,39 @@ class OwnerControllerTests {
 			.andExpect(status().is3xxRedirection())
 			.andExpect(redirectedUrl("/owners/" + pathOwnerId + "/edit"))
 			.andExpect(flash().attributeExists("error"));
+	}
+
+	@Test
+	void showOwnerDisplaysWeightWhenPresent() throws Exception {
+		mockMvc.perform(get("/owners/{ownerId}", TEST_OWNER_ID))
+			.andExpect(status().isOk())
+			.andExpect(content().string(org.hamcrest.Matchers.containsString("Weight (kg)"))) // Header should be present
+			.andExpect(content().string(org.hamcrest.Matchers.containsString("12.50"))) // Specific weight value
+			.andExpect(content().string(org.hamcrest.Matchers.containsString("Vaccination without weight"))) // Ensure other visit is there
+			.andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("null")))) // No "null" string
+			.andExpect(view().name("owners/ownerDetails"));
+	}
+
+	@Test
+	void showOwnerDoesNotDisplayWeightHeaderIfNoVisitsHaveWeight() throws Exception {
+		// Setup an owner with visits, but none have weight
+		Owner ownerWithoutWeightVisits = george();
+		Visit visit1 = new Visit();
+		visit1.setDate(LocalDate.now().plusDays(1));
+		visit1.setDescription("Visit without weight 1");
+		ownerWithoutWeightVisits.getPet("Max").addVisit(visit1);
+
+		Visit visit2 = new Visit();
+		visit2.setDate(LocalDate.now().minusDays(5));
+		visit2.setDescription("Visit without weight 2");
+		ownerWithoutWeightVisits.getPet("Max").addVisit(visit2);
+
+		given(this.owners.findById(TEST_OWNER_ID)).willReturn(Optional.of(ownerWithoutWeightVisits));
+
+		mockMvc.perform(get("/owners/{ownerId}", TEST_OWNER_ID))
+			.andExpect(status().isOk())
+			.andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("Weight (kg)")))) // Header should be absent
+			.andExpect(view().name("owners/ownerDetails"));
 	}
 
 }
