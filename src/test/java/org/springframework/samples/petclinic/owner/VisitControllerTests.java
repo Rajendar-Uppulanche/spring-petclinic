@@ -27,7 +27,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledInNativeImage;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest; // Corrected import
 import org.springframework.test.context.aot.DisabledInAotMode;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -84,6 +84,18 @@ class VisitControllerTests {
 	}
 
 	@Test
+	void processNewVisitFormSuccessWithWeight() throws Exception {
+		mockMvc
+			.perform(post("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, TEST_PET_ID)
+				.param("name", "George")
+				.param("date", LocalDate.now().plusDays(1).toString())
+				.param("description", "Visit Description with Weight")
+				.param("weight", "15.5"))
+			.andExpect(status().is3xxRedirection())
+			.andExpect(view().name("redirect:/owners/{ownerId}"));
+	}
+
+	@Test
 	void processNewVisitFormHasErrors() throws Exception {
 		mockMvc
 			.perform(post("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, TEST_PET_ID).param("name",
@@ -102,6 +114,34 @@ class VisitControllerTests {
 				.param("description", "Visit Description"))
 			.andExpect(model().attributeHasFieldErrors("visit", "date"))
 			.andExpect(model().attributeHasFieldErrorCode("visit", "date", "typeMismatch.visitDate"))
+			.andExpect(status().isOk())
+			.andExpect(view().name("pets/createOrUpdateVisitForm"));
+	}
+
+	@Test
+	void processNewVisitFormHasErrorsNegativeWeight() throws Exception {
+		mockMvc
+			.perform(post("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, TEST_PET_ID)
+				.param("name", "George")
+				.param("date", LocalDate.now().plusDays(1).toString())
+				.param("description", "Visit Description")
+				.param("weight", "-5.0"))
+			.andExpect(model().attributeHasFieldErrors("visit", "weight"))
+			.andExpect(model().attributeHasFieldErrorCode("visit", "weight", "negativeOrZeroWeight"))
+			.andExpect(status().isOk())
+			.andExpect(view().name("pets/createOrUpdateVisitForm"));
+	}
+
+	@Test
+	void processNewVisitFormHasErrorsZeroWeight() throws Exception {
+		mockMvc
+			.perform(post("/owners/{ownerId}/pets/{petId}/visits/new", TEST_OWNER_ID, TEST_PET_ID)
+				.param("name", "George")
+				.param("date", LocalDate.now().plusDays(1).toString())
+				.param("description", "Visit Description")
+				.param("weight", "0.0"))
+			.andExpect(model().attributeHasFieldErrors("visit", "weight"))
+			.andExpect(model().attributeHasFieldErrorCode("visit", "weight", "negativeOrZeroWeight"))
 			.andExpect(status().isOk())
 			.andExpect(view().name("pets/createOrUpdateVisitForm"));
 	}
