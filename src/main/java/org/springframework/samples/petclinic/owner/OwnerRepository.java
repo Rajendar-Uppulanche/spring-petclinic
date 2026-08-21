@@ -34,15 +34,14 @@ import org.springframework.data.jpa.repository.JpaRepository;
  * @author Wick Dynex
  */
 public interface OwnerRepository extends JpaRepository<Owner, Integer> {
-
 	/**
-	 * Retrieve {@link Owner}s from the data store by last name, returning all owners
-	 * whose last name <i>starts</i> with the given name.
+	 * Retrieve {@link Owner}s from the data store by last name, supporting partial matches,
+	 * case-insensitivity, and alphabetical sorting by last name.
 	 * @param lastName Value to search for
-	 * @return a Collection of matching {@link Owner}s (or an empty Collection if none
-	 * found)
+	 * @param pageable Pageable object for pagination
+	 * @return a Page of matching {@link Owner}s (or an empty Page if none found)
 	 */
-	Page<Owner> findByLastNameStartingWith(String lastName, Pageable pageable);
+	Page<Owner> findByLastNameContainingIgnoreCaseOrderByLastNameAsc(String lastName, Pageable pageable);
 
 	/**
 	 * Retrieve an {@link Owner} from the data store by id.
