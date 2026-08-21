@@ -15,11 +15,13 @@
  */
 package org.springframework.samples.petclinic.owner;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 
 /**
  * Repository class for <code>Owner</code> domain objects. All method names are compliant
@@ -58,5 +60,18 @@ public interface OwnerRepository extends JpaRepository<Owner, Integer> {
 	 * input for id)
 	 */
 	Optional<Owner> findById(Integer id);
+
+	/**
+	 * Retrieve all {@link Owner}s from the data store, eagerly fetching their associated
+	 * {@link Pet}s and {@link Visit}s.
+	 * <p>
+	 * This method is optimized to prevent N+1 select problems when accessing pet and visit
+	 * data, which is crucial for performance-sensitive operations like data quality
+	 * reporting.
+	 * </p>
+	 * @return a List of all {@link Owner}s with their pets and visits.
+	 */
+	@Query("SELECT DISTINCT owner FROM Owner owner LEFT JOIN FETCH owner.pets pet LEFT JOIN FETCH pet.visits")
+	List<Owner> findAllWithPetsAndVisits();
 
 }
