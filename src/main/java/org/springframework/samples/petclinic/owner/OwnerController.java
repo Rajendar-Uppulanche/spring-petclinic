@@ -176,4 +176,19 @@ class OwnerController {
 		return mav;
 	}
 
+	/**
+	 * Custom handler for displaying an owner by userId.
+	 * @param userId the unique user ID of the owner to display
+	 * @return a ModelMap with the model attributes for the view
+	 */	
+	@GetMapping("/owners/user/{userId}")
+	public ModelAndView showOwnerByUserId(@PathVariable("userId") String userId) {
+		ModelAndView mav = new ModelAndView("owners/ownerDetails");
+		Optional<Owner> optionalOwner = this.owners.findByUserId(userId);
+		Owner owner = optionalOwner.orElseThrow(() -> new IllegalArgumentException(
+				"Owner not found with userId: " + userId + ". Please ensure the ID is correct " + "and the owner exists in the database."));
+		mav.addObject(owner);
+		return mav;
+	}
+
 }
