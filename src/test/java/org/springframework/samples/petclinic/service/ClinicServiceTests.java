@@ -96,6 +96,43 @@ class ClinicServiceTests {
 	}
 
 	@Test
+	void testFindOwnersByTelephoneStartingWith() {
+		// Assuming an owner with telephone "6085551023" exists (e.g., Franklin, ID 1)
+		Page<Owner> ownersPage = this.owners.findByLastNameStartingWithOrTelephoneStartingWith(null, "608555102", pageable);
+		assertThat(ownersPage).hasSize(1);
+		assertThat(ownersPage.iterator().next().getLastName()).isEqualTo("Franklin");
+
+		ownersPage = this.owners.findByLastNameStartingWithOrTelephoneStartingWith(null, "999", pageable);
+		assertThat(ownersPage).isEmpty();
+	}
+
+	@Test
+	void testFindOwnersByLastNameStartingWithOrTelephoneStartingWith() {
+		// Search by partial last name "Fran"
+		Page<Owner> ownersPage = this.owners.findByLastNameStartingWithOrTelephoneStartingWith("Fran", null, pageable);
+		assertThat(ownersPage).hasSize(1);
+		assertThat(ownersPage.iterator().next().getLastName()).isEqualTo("Franklin");
+
+		// Search by partial telephone "608"
+		ownersPage = this.owners.findByLastNameStartingWithOrTelephoneStartingWith(null, "608", pageable);
+		assertThat(ownersPage).hasSize(1);
+		assertThat(ownersPage.iterator().next().getLastName()).isEqualTo("Franklin");
+
+		// Combined search: "Fran" OR "608" (should still find Franklin)
+		ownersPage = this.owners.findByLastNameStartingWithOrTelephoneStartingWith("Fran", "608", pageable);
+		assertThat(ownersPage).hasSize(1);
+		assertThat(ownersPage.iterator().next().getLastName()).isEqualTo("Franklin");
+
+		// Search for something that doesn't exist
+		ownersPage = this.owners.findByLastNameStartingWithOrTelephoneStartingWith("NonExistent", "000", pageable);
+		assertThat(ownersPage).isEmpty();
+
+		// Search for empty string (should return all owners, similar to existing behavior for lastName="")
+		ownersPage = this.owners.findByLastNameStartingWithOrTelephoneStartingWith("", null, pageable);
+		assertThat(ownersPage.getTotalElements()).isGreaterThan(0); // Should return all owners
+	}
+
+	@Test
 	void shouldFindSingleOwnerWithPet() {
 		Optional<Owner> optionalOwner = this.owners.findById(1);
 		assertThat(optionalOwner).isPresent();
