@@ -92,28 +92,27 @@ class OwnerController {
 	}
 
 	@GetMapping("/owners")
-	public String processFindForm(@RequestParam(defaultValue = "1") int page, Owner owner, BindingResult result,
-			Model model) {
-		// allow parameterless GET request for /owners to return all records
-		String lastName = owner.getLastName();
-		if (lastName == null) {
-			lastName = ""; // empty string signifies broadest possible search
+	public String processFindForm(@RequestParam(defaultValue = "1") int page,
+			@RequestParam(name = "searchQuery", required = false) String searchQuery, Model model) {
+		if (searchQuery == null) {
+			searchQuery = "";
 		}
 		else {
-			lastName = lastName.strip();
+			searchQuery = searchQuery.strip();
 		}
 
-		// find owners by last name
-		Page<Owner> ownersResults = findPaginatedForOwnersLastName(page, lastName);
+		Page<Owner> ownersResults = findPaginatedForOwnersCombinedSearch(page, searchQuery);
+
 		if (ownersResults.isEmpty()) {
 			// no owners found
-			result.rejectValue("lastName", "notFound", "not found");
+			model.addAttribute("notFound", true);
+			model.addAttribute("owner", new Owner()); // Add an empty owner for form binding
 			return "owners/findOwners";
 		}
 
 		if (ownersResults.getTotalElements() == 1) {
 			// 1 owner found
-			owner = ownersResults.iterator().next();
+			Owner owner = ownersResults.iterator().next();
 			return "redirect:/owners/" + owner.getId();
 		}
 
@@ -130,10 +129,24 @@ class OwnerController {
 		return "owners/ownersList";
 	}
 
-	private Page<Owner> findPaginatedForOwnersLastName(int page, String lastname) {
+	private Page<Owner> findPaginatedForOwnersCombinedSearch(int page, String searchQuery) {
 		int pageSize = 5;
 		Pageable pageable = PageRequest.of(page - 1, pageSize);
-		return owners.findByLastNameStartingWith(lastname, pageable);
+
+		String lastNameSearch = null;
+		String telephoneSearch = null;
+
+		if (searchQuery.isEmpty()) {
+			// If searchQuery is empty, search by empty last name to get all owners (existing behavior)
+			lastNameSearch = "";
+		}
+		else if (searchQuery.matches("\\d+")) { // Check if it's purely numeric
+			telephoneSearch = searchQuery;
+		}
+		else { // Assume it's a last name
+			lastNameSearch = searchQuery;
+		}
+		return owners.findByLastNameStartingWithOrTelephoneStartingWith(lastNameSearch, telephoneSearch, pageable);
 	}
 
 	@GetMapping("/owners/{ownerId}/edit")
