@@ -37,6 +37,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import jakarta.validation.Valid;
 
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+import org.springframework.samples.petclinic.visit.VisitService;
 
 /**
  * @author Juergen Hoeller
@@ -54,9 +55,12 @@ class PetController {
 
 	private final PetTypeRepository types;
 
-	public PetController(OwnerRepository owners, PetTypeRepository types) {
+	private final VisitService visitService;
+
+	public PetController(OwnerRepository owners, PetTypeRepository types, VisitService visitService) {
 		this.owners = owners;
 		this.types = types;
+		this.visitService = visitService;
 	}
 
 	@ModelAttribute("types")
@@ -137,13 +141,25 @@ class PetController {
 	}
 
 	@GetMapping("/pets/{petId}/edit")
-	public String initUpdateForm() {
+	public String initUpdateForm(Pet pet, ModelMap model) {
+		boolean hasVisits = visitService.hasVisits(pet.getId());
+		model.addAttribute("hasVisits", hasVisits);
 		return VIEWS_PETS_CREATE_OR_UPDATE_FORM;
 	}
 
 	@PostMapping("/pets/{petId}/edit")
 	public String processUpdateForm(Owner owner, @Valid Pet pet, BindingResult result,
 			RedirectAttributes redirectAttributes) {
+
+		// Retrieve the original pet to compare its type
+		Pet originalPet = owner.getPet(pet.getId());
+
+		// Server-side validation for pet type change (BR-029)
+		if (originalPet != null && !Objects.equals(originalPet.getType(), pet.getType())) {
+			if (visitService.hasVisits(pet.getId())) {
+				result.rejectValue("type", "petType.hasVisits", "Pet type cannot be changed for pets with visits.");
+			}
+		}
 
 		String petName = pet.getName();
 
@@ -161,6 +177,11 @@ class PetController {
 		}
 
 		if (result.hasErrors()) {
+			// If there are errors, ensure 'hasVisits' is still in the model for correct form rendering
+			if (pet.getId() != null) { // Only check if pet is not new
+				boolean hasVisits = visitService.hasVisits(pet.getId());
+				result.getModel().put("hasVisits", hasVisits);
+			}
 			return VIEWS_PETS_CREATE_OR_UPDATE_FORM;
 		}
 
@@ -172,6 +193,11 @@ class PetController {
 				throw ex;
 			}
 			result.rejectValue("name", "duplicate", "already exists");
+			// If there are errors, ensure 'hasVisits' is still in the model for correct form rendering
+			if (pet.getId() != null) { // Only check if pet is not new
+				boolean hasVisits = visitService.hasVisits(pet.getId());
+				result.getModel().put("hasVisits", hasVisits);
+			}
 			return VIEWS_PETS_CREATE_OR_UPDATE_FORM;
 		}
 		redirectAttributes.addFlashAttribute("message", "Pet details has been edited");
