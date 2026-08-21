@@ -101,6 +101,11 @@ class VisitController {
 			result.rejectValue("date", "typeMismatch.visitDate");
 		}
 
+		// BR-001: Weight must be positive if provided
+		if (visit.getWeight() != null && visit.getWeight() <= 0) {
+			result.rejectValue("weight", "negativeOrZeroWeight", "Weight must be positive.");
+		}
+
 		if (result.hasErrors()) {
 			return "pets/createOrUpdateVisitForm";
 		}
