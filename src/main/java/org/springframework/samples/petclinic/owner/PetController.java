@@ -50,26 +50,20 @@ class PetController {
 
 	private static final String VIEWS_PETS_CREATE_OR_UPDATE_FORM = "pets/createOrUpdatePetForm";
 
-	private final OwnerRepository owners;
+	private final PetService petService; // Changed from OwnerRepository and PetTypeRepository
 
-	private final PetTypeRepository types;
-
-	public PetController(OwnerRepository owners, PetTypeRepository types) {
-		this.owners = owners;
-		this.types = types;
+	public PetController(PetService petService) { // Constructor updated
+		this.petService = petService;
 	}
 
 	@ModelAttribute("types")
 	public Collection<PetType> populatePetTypes() {
-		return this.types.findPetTypes();
+		return this.petService.findPetTypes(); // Using PetService
 	}
 
 	@ModelAttribute("owner")
 	public Owner findOwner(@PathVariable("ownerId") int ownerId) {
-		Optional<Owner> optionalOwner = this.owners.findById(ownerId);
-		Owner owner = optionalOwner.orElseThrow(() -> new IllegalArgumentException(
-				"Owner not found with id: " + ownerId + ". Please ensure the ID is correct "));
-		return owner;
+		return this.petService.findOwnerById(ownerId); // Using PetService
 	}
 
 	@ModelAttribute("pet")
@@ -79,11 +73,7 @@ class PetController {
 		if (petId == null) {
 			return new Pet();
 		}
-
-		Optional<Owner> optionalOwner = this.owners.findById(ownerId);
-		Owner owner = optionalOwner.orElseThrow(() -> new IllegalArgumentException(
-				"Owner not found with id: " + ownerId + ". Please ensure the ID is correct "));
-		return owner.getPet(petId);
+		return this.petService.findPetById(petId, ownerId); // Using PetService
 	}
 
 	@InitBinder("owner")
@@ -101,6 +91,7 @@ class PetController {
 	public String initCreationForm(Owner owner, ModelMap model) {
 		Pet pet = new Pet();
 		owner.addPet(pet);
+		model.addAttribute("hasVisits", false); // New pets never have visits
 		return VIEWS_PETS_CREATE_OR_UPDATE_FORM;
 	}
 
@@ -123,7 +114,7 @@ class PetController {
 
 		try {
 			owner.addPet(pet);
-			this.owners.saveAndFlush(owner);
+			this.petService.saveOwner(owner); // Using PetService
 		}
 		catch (DataIntegrityViolationException ex) {
 			if (!isDuplicatePetNameViolation(ex)) {
@@ -137,7 +128,9 @@ class PetController {
 	}
 
 	@GetMapping("/pets/{petId}/edit")
-	public String initUpdateForm() {
+	public String initUpdateForm(@PathVariable("ownerId") int ownerId, @PathVariable("petId") int petId, ModelMap model) { // Added parameters
+		boolean hasVisits = this.petService.hasVisits(petId, ownerId); // Get visit status
+		model.addAttribute("hasVisits", hasVisits); // Add to model
 		return VIEWS_PETS_CREATE_OR_UPDATE_FORM;
 	}
 
@@ -196,7 +189,7 @@ class PetController {
 		else {
 			owner.addPet(pet);
 		}
-		this.owners.saveAndFlush(owner);
+		this.petService.saveOwner(owner); // Using PetService
 	}
 
 	private boolean isDuplicatePetNameViolation(DataIntegrityViolationException ex) {
