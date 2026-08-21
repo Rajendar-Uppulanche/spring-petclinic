@@ -15,11 +15,15 @@
  */
 package org.springframework.samples.petclinic.owner;
 
-import java.util.Optional;
-
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.Repository;
+import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Collection;
+import java.util.Optional;
 
 /**
  * Repository class for <code>Owner</code> domain objects. All method names are compliant
@@ -32,31 +36,51 @@ import org.springframework.data.jpa.repository.JpaRepository;
  * @author Sam Brannen
  * @author Michael Isvy
  * @author Wick Dynex
+ * @author SP-55
  */
-public interface OwnerRepository extends JpaRepository<Owner, Integer> {
+public interface OwnerRepository extends Repository<Owner, Integer> {
 
 	/**
-	 * Retrieve {@link Owner}s from the data store by last name, returning all owners
-	 * whose last name <i>starts</i> with the given name.
+	 * Retrieve all <code>PetType</code>s from the data store.
+	 * @return a <code>Collection</code> of <code>PetType</code>s
+	 */
+	@Query("SELECT ptype FROM PetType ptype ORDER BY ptype.name")
+	@Transactional(readOnly = true)
+	List<PetType> findPetTypes();
+
+	/**
+	 * Retrieve <code>Owner</code>s from the data store by last name, returning all owners
+	 * whose last name starts with the given name.
 	 * @param lastName Value to search for
-	 * @return a Collection of matching {@link Owner}s (or an empty Collection if none
-	 * found)
+	 * @return a <code>Collection</code> of matching <code>Owner</code>s (or an empty
+	 * <code>Collection</code> if none found)
 	 */
-	Page<Owner> findByLastNameStartingWith(String lastName, Pageable pageable);
+	@Query("SELECT owner FROM Owner owner WHERE owner.lastName LIKE :lastName%")
+	@Transactional(readOnly = true)
+	Page<Owner> findByLastName(@Param("lastName") String lastName, Pageable pageable);
+
+	@Query("SELECT owner FROM Owner owner WHERE owner.lastName LIKE :lastName%")
+	@Transactional(readOnly = true)
+	Page<Owner> findByLastNameStartingWith(@Param("lastName") String lastName, Pageable pageable);
 
 	/**
-	 * Retrieve an {@link Owner} from the data store by id.
-	 * <p>
-	 * This method returns an {@link Optional} containing the {@link Owner} if found. If
-	 * no {@link Owner} is found with the provided id, it will return an empty
-	 * {@link Optional}.
-	 * </p>
+	 * Retrieve an <code>Owner</code> from the data store by id.
 	 * @param id the id to search for
-	 * @return an {@link Optional} containing the {@link Owner} if found, or an empty
-	 * {@link Optional} if not found.
-	 * @throws IllegalArgumentException if the id is null (assuming null is not a valid
-	 * input for id)
+	 * @return the <code>Owner</code> if found
 	 */
+	@Transactional(readOnly = true)
 	Optional<Owner> findById(Integer id);
+
+	/**
+	 * Save an <code>Owner</code> to the data store, either inserting or updating it.
+	 * @param owner the <code>Owner</code> to save
+	 */
+	void save(Owner owner);
+
+	/**
+	 * Save an <code>Owner</code> to the data store, either inserting or updating it.
+	 * @param owner the <code>Owner</code> to save
+	 */
+	void saveAndFlush(Owner owner);
 
 }

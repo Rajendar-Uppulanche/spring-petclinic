@@ -137,7 +137,10 @@ class PetController {
 	}
 
 	@GetMapping("/pets/{petId}/edit")
-	public String initUpdateForm() {
+	public String initUpdateForm(Pet pet, ModelMap model) {
+		// Determine if the pet has any visits to conditionally disable the pet type field
+		boolean hasVisits = !pet.getVisits().isEmpty();
+		model.addAttribute("hasVisits", hasVisits);
 		return VIEWS_PETS_CREATE_OR_UPDATE_FORM;
 	}
 
