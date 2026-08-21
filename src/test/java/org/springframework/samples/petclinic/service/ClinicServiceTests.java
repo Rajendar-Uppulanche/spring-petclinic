@@ -22,6 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.springframework.dao.DataIntegrityViolationException;
 import java.time.LocalDate;
 import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
@@ -36,6 +37,7 @@ import org.springframework.samples.petclinic.owner.OwnerRepository;
 import org.springframework.samples.petclinic.owner.Pet;
 import org.springframework.samples.petclinic.owner.PetType;
 import org.springframework.samples.petclinic.owner.PetTypeRepository;
+import org.springframework.samples.petclinic.owner.Vaccination;
 import org.springframework.samples.petclinic.owner.Visit;
 import org.springframework.samples.petclinic.vet.Vet;
 import org.springframework.samples.petclinic.vet.VetRepository;
@@ -118,8 +120,12 @@ class ClinicServiceTests {
 		owner.setAddress("4, Evans Street");
 		owner.setCity("Wollongong");
 		owner.setTelephone("4444444444");
+		owner.setEmail("sam.schultz@example.com");
+		owner.setReceivesVaccinationReminders(true);
 		this.owners.save(owner);
 		assertThat(owner.getId()).isNotZero();
+		assertThat(owner.getEmail()).isEqualTo("sam.schultz@example.com");
+		assertThat(owner.isReceivesVaccinationReminders()).isTrue();
 
 		owners = this.owners.findByLastNameStartingWith("Schultz", pageable);
 		assertThat(owners.getTotalElements()).isEqualTo(found + 1);
@@ -133,8 +139,12 @@ class ClinicServiceTests {
 		Owner owner = optionalOwner.get();
 		String oldLastName = owner.getLastName();
 		String newLastName = oldLastName + "X";
+		String oldEmail = owner.getEmail();
+		String newEmail = "new." + oldEmail;
 
 		owner.setLastName(newLastName);
+		owner.setEmail(newEmail);
+		owner.setReceivesVaccinationReminders(false);
 		this.owners.save(owner);
 
 		// retrieving new name from database
@@ -142,6 +152,8 @@ class ClinicServiceTests {
 		assertThat(optionalOwner).isPresent();
 		owner = optionalOwner.get();
 		assertThat(owner.getLastName()).isEqualTo(newLastName);
+		assertThat(owner.getEmail()).isEqualTo(newEmail);
+		assertThat(owner.isReceivesVaccinationReminders()).isFalse();
 	}
 
 	@Test
@@ -171,6 +183,12 @@ class ClinicServiceTests {
 		owner6.addPet(pet);
 		assertThat(owner6.getPets()).hasSize(found + 1);
 
+		// Add a vaccination to the new pet
+		Vaccination vaccination = new Vaccination();
+		vaccination.setType("Rabies");
+		vaccination.setDueDate(LocalDate.now().plusMonths(6));
+		pet.addVaccination(vaccination);
+
 		this.owners.save(owner6);
 
 		optionalOwner = this.owners.findById(6);
@@ -180,6 +198,8 @@ class ClinicServiceTests {
 		// checks that id has been generated
 		pet = owner6.getPet("bowser");
 		assertThat(pet.getId()).isNotNull();
+		assertThat(pet.getVaccinations()).hasSize(1);
+		assertThat(pet.getVaccinations().get(0).getType()).isEqualTo("Rabies");
 	}
 
 	@Test
@@ -194,6 +214,13 @@ class ClinicServiceTests {
 
 		String newName = oldName + "X";
 		pet7.setName(newName);
+
+		// Add a vaccination to an existing pet
+		Vaccination vaccination = new Vaccination();
+		vaccination.setType("Distemper");
+		vaccination.setDueDate(LocalDate.now().plusMonths(3));
+		pet7.addVaccination(vaccination);
+
 		this.owners.save(owner6);
 
 		optionalOwner = this.owners.findById(6);
@@ -201,6 +228,8 @@ class ClinicServiceTests {
 		owner6 = optionalOwner.get();
 		pet7 = owner6.getPet(7);
 		assertThat(pet7.getName()).isEqualTo(newName);
+		assertThat(pet7.getVaccinations()).hasSize(1);
+		assertThat(pet7.getVaccinations().get(0).getType()).isEqualTo("Distemper");
 	}
 
 	@Test
