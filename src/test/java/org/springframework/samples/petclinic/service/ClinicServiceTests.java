@@ -235,6 +235,69 @@ class ClinicServiceTests {
 	}
 
 	@Test
+	@Transactional
+	void shouldAddNewVisitWithWeightForPet() {
+		Optional<Owner> optionalOwner = this.owners.findById(6);
+		assertThat(optionalOwner).isPresent();
+		Owner owner6 = optionalOwner.get();
+
+		Pet pet7 = owner6.getPet(7);
+		int found = pet7.getVisits().size();
+		Visit visit = new Visit();
+		visit.setDescription("test with weight");
+		visit.setWeight(12.5); // Set a weight
+
+		owner6.addVisit(pet7.getId(), visit);
+		this.owners.save(owner6);
+
+		assertThat(pet7.getVisits()) //
+			.hasSize(found + 1) //
+			.allMatch(value -> value.getId() != null);
+
+		// Verify the saved visit has the correct weight
+		Optional<Visit> savedVisit = pet7.getVisits().stream()
+			.filter(v -> "test with weight".equals(v.getDescription()))
+			.findFirst();
+		assertThat(savedVisit).isPresent();
+		assertThat(savedVisit.get().getWeight()).isEqualTo(12.5);
+	}
+
+	@Test
+	@Transactional
+	void shouldNotAllowZeroOrNegativeWeightForVisit() {
+		Optional<Owner> optionalOwner = this.owners.findById(6);
+		assertThat(optionalOwner).isPresent();
+		Owner owner6 = optionalOwner.get();
+
+		Pet pet7 = owner6.getPet(7);
+		Visit visit = new Visit();
+		visit.setDescription("invalid weight test");
+		visit.setDate(LocalDate.now().plusDays(1)); // Must be a future date
+
+		// Test with zero weight
+		visit.setWeight(0.0);
+		owner6.addVisit(pet7.getId(), visit);
+		assertThrows(jakarta.validation.ConstraintViolationException.class, () -> {
+			this.owners.saveAndFlush(owner6);
+		});
+		// Reset owner for next test
+		optionalOwner = this.owners.findById(6);
+		assertThat(optionalOwner).isPresent();
+		owner6 = optionalOwner.get();
+		pet7 = owner6.getPet(7);
+		visit = new Visit();
+		visit.setDescription("invalid weight test negative");
+		visit.setDate(LocalDate.now().plusDays(1));
+
+		// Test with negative weight
+		visit.setWeight(-5.0);
+		owner6.addVisit(pet7.getId(), visit);
+		assertThrows(jakarta.validation.ConstraintViolationException.class, () -> {
+			this.owners.saveAndFlush(owner6);
+		});
+	}
+
+	@Test
 	void shouldFindVisitsByPetId() {
 		Optional<Owner> optionalOwner = this.owners.findById(6);
 		assertThat(optionalOwner).isPresent();

@@ -101,6 +101,11 @@ class VisitController {
 			result.rejectValue("date", "typeMismatch.visitDate");
 		}
 
+		// The @DecimalMin annotation on the Visit entity handles the validation for 'weight'.
+		// If 'weight' is provided but invalid (e.g., non-numeric, zero, or negative),
+		// BindingResult will contain the errors.
+		// No additional explicit validation logic is needed here beyond checking result.hasErrors().
+
 		if (result.hasErrors()) {
 			return "pets/createOrUpdateVisitForm";
 		}

@@ -38,6 +38,7 @@ import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasProperty;
 import static org.hamcrest.Matchers.hasSize;
+import org.hamcrest.Matchers;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
@@ -99,6 +100,8 @@ class OwnerControllerTests {
 		given(this.owners.findById(TEST_OWNER_ID)).willReturn(Optional.of(george));
 		Visit visit = new Visit();
 		visit.setDate(LocalDate.now());
+		visit.setDescription("Routine checkup");
+		visit.setWeight(12.3); // Add weight to the mock visit
 		george.getPet("Max").getVisits().add(visit);
 
 	}
@@ -252,7 +255,10 @@ class OwnerControllerTests {
 			.andExpect(model().attribute("owner", hasProperty("telephone", is("6085551023"))))
 			.andExpect(model().attribute("owner", hasProperty("pets", not(empty()))))
 			.andExpect(model().attribute("owner",
-					hasProperty("pets", hasItem(hasProperty("visits", hasSize(greaterThan(0)))))))
+					hasProperty("pets", hasItem(Matchers.allOf(
+						hasProperty("visits", hasSize(greaterThan(0))),
+						hasProperty("visits", hasItem(hasProperty("weight", is(12.3))))
+					)))))
 			.andExpect(view().name("owners/ownerDetails"));
 	}
 

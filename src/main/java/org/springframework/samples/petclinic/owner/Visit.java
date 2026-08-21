@@ -23,6 +23,7 @@ import org.springframework.samples.petclinic.model.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 
 /**
@@ -41,6 +42,10 @@ public class Visit extends BaseEntity {
 
 	@NotBlank
 	private String description;
+
+	@Column(name = "weight")
+	@DecimalMin(value = "0.01", message = "Weight must be greater than 0")
+	private Double weight;
 
 	/**
 	 * Creates a new instance of Visit for tomorrow
@@ -63,6 +68,14 @@ public class Visit extends BaseEntity {
 
 	public void setDescription(String description) {
 		this.description = description;
+	}
+
+	public Double getWeight() {
+		return weight;
+	}
+
+	public void setWeight(Double weight) {
+		this.weight = weight;
 	}
 
 }
