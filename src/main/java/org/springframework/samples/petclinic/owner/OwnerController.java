@@ -176,4 +176,18 @@ class OwnerController {
 		return mav;
 	}
 
+	@GetMapping("/owners/{ownerId}/unsubscribe")
+	public String unsubscribeFromReminders(@PathVariable("ownerId") int ownerId, RedirectAttributes redirectAttributes) {
+		Optional<Owner> optionalOwner = owners.findById(ownerId);
+		if (optionalOwner.isPresent()) {
+			Owner owner = optionalOwner.get();
+			owner.setReceivesVaccinationReminders(false);
+			owners.save(owner);
+			redirectAttributes.addFlashAttribute("message", "You have successfully unsubscribed from vaccination reminders.");
+			return "redirect:/owners/" + ownerId;
+		} else {
+			redirectAttributes.addFlashAttribute("error", "Owner not found. Unsubscribe failed.");
+			return "redirect:/";
+		}
+	}
 }
