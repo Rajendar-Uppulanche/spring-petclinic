@@ -33,6 +33,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.samples.petclinic.visit.Visit;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
@@ -69,21 +70,42 @@ class PetControllerTests {
 
 	@BeforeEach
 	void setup() {
-		PetType cat = new PetType();
-		cat.setId(3);
-		cat.setName("hamster");
-		given(this.types.findPetTypes()).willReturn(List.of(cat));
+		PetType catType = new PetType();
+		catType.setId(3);
+		catType.setName("cat");
+		PetType dogType = new PetType();
+		dogType.setId(4);
+		dogType.setName("dog");
+		PetType hamsterType = new PetType();
+		hamsterType.setId(5);
+		hamsterType.setName("hamster");
+		given(this.types.findPetTypes()).willReturn(List.of(catType, dogType, hamsterType));
 
 		Owner owner = new Owner();
-		Pet pet = new Pet();
-		Pet dog = new Pet();
-		owner.addPet(pet);
-		owner.addPet(dog);
-		pet.setId(TEST_PET_ID);
-		dog.setId(TEST_PET_ID + 1);
-		pet.setName("petty");
-		dog.setName("doggy");
+		owner.setId(TEST_OWNER_ID);
+
+		Pet petWithVisits = new Pet();
+		petWithVisits.setId(TEST_PET_ID);
+		petWithVisits.setName("petty");
+		petWithVisits.setBirthDate(LocalDate.of(2015, 2, 12));
+		petWithVisits.setType(catType);
+		Visit visit = new Visit();
+		visit.setId(1);
+		visit.setDate(LocalDate.now());
+		visit.setDescription("routine checkup");
+		petWithVisits.addVisit(visit);
+
+		Pet petWithoutVisits = new Pet();
+		petWithoutVisits.setId(TEST_PET_ID + 1);
+		petWithoutVisits.setName("doggy");
+		petWithoutVisits.setBirthDate(LocalDate.of(2018, 5, 1));
+		petWithoutVisits.setType(dogType);
+
+		owner.addPet(petWithVisits);
+		owner.addPet(petWithoutVisits);
+
 		given(this.owners.findById(TEST_OWNER_ID)).willReturn(Optional.of(owner));
+		given(this.owners.saveAndFlush(any(Owner.class))).willReturn(owner);
 	}
 
 	@Test
@@ -189,6 +211,24 @@ class PetControllerTests {
 	}
 
 	@Test
+	void initUpdateForm_petWithVisits_petTypeIsReadOnly() throws Exception {
+		mockMvc.perform(get("/owners/{ownerId}/pets/{petId}/edit", TEST_OWNER_ID, TEST_PET_ID)) // TEST_PET_ID has visits
+			.andExpect(status().isOk())
+			.andExpect(model().attributeExists("pet"))
+			.andExpect(model().attribute("isPetTypeReadOnly", true))
+			.andExpect(view().name("pets/createOrUpdatePetForm"));
+	}
+
+	@Test
+	void initUpdateForm_petWithoutVisits_petTypeIsEditable() throws Exception {
+		mockMvc.perform(get("/owners/{ownerId}/pets/{petId}/edit", TEST_OWNER_ID, TEST_PET_ID + 1)) // TEST_PET_ID + 1 has no visits
+			.andExpect(status().isOk())
+			.andExpect(model().attributeExists("pet"))
+			.andExpect(model().attribute("isPetTypeReadOnly", false))
+			.andExpect(view().name("pets/createOrUpdatePetForm"));
+	}
+
+	@Test
 	void processUpdateFormSuccess() throws Exception {
 		mockMvc
 			.perform(post("/owners/{ownerId}/pets/{petId}/edit", TEST_OWNER_ID, TEST_PET_ID).param("name", "Betty")
@@ -201,12 +241,8 @@ class PetControllerTests {
 	@Test
 	void processUpdateFormWithSameName() throws Exception {
 		mockMvc.perform(post("/owners/{ownerId}/pets/{petId}/edit", TEST_OWNER_ID, TEST_PET_ID).param("name", "petty") // same
-																														// name
-																														// as
-																														// existing
-																														// pet
-			.param("type", "hamster")
-			.param("birthDate", "2015-02-12"))
+																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																														.param("type", "hamster")
+				.param("birthDate", "2015-02-12"))
 			.andExpect(status().is3xxRedirection())
 			.andExpect(view().name("redirect:/owners/{ownerId}"));
 	}
@@ -269,6 +305,45 @@ class PetControllerTests {
 				.andExpect(view().name("pets/createOrUpdatePetForm"));
 		}
 
+	}
+
+	@Test
+	void processUpdateForm_changePetTypeWithVisits_failsValidation() throws Exception {
+		// Attempt to change type of petWithVisits (TEST_PET_ID) from 'cat' to 'dog'
+		mockMvc
+			.perform(post("/owners/{ownerId}/pets/{petId}/edit", TEST_OWNER_ID, TEST_PET_ID)
+				.param("name", "petty")
+				.param("type", "dog") // Attempt to change type
+				.param("birthDate", "2015-02-12"))
+			.andExpect(model().attributeHasErrors("pet"))
+			.andExpect(model().attributeHasFieldErrors("pet", "type"))
+			.andExpect(model().attributeHasFieldErrorCode("pet", "type", "petTypeReadOnly"))
+			.andExpect(status().isOk()) // Should stay on the form
+			.andExpect(view().name("pets/createOrUpdatePetForm"));
+	}
+
+	@Test
+	void processUpdateForm_changePetTypeWithoutVisits_succeeds() throws Exception {
+		// Attempt to change type of petWithoutVisits (TEST_PET_ID + 1) from 'dog' to 'cat'
+		mockMvc
+			.perform(post("/owners/{ownerId}/pets/{petId}/edit", TEST_OWNER_ID, TEST_PET_ID + 1)
+				.param("name", "doggy")
+				.param("type", "cat") // Change type
+				.param("birthDate", "2018-05-01"))
+			.andExpect(status().is3xxRedirection())
+			.andExpect(view().name("redirect:/owners/{ownerId}"));
+	}
+
+	@Test
+	void processUpdateForm_noChangePetTypeWithVisits_succeeds() throws Exception {
+		// Keep the same type for petWithVisits (TEST_PET_ID)
+		mockMvc
+			.perform(post("/owners/{ownerId}/pets/{petId}/edit", TEST_OWNER_ID, TEST_PET_ID)
+				.param("name", "petty")
+				.param("type", "cat") // Same type
+				.param("birthDate", "2015-02-12"))
+			.andExpect(status().is3xxRedirection())
+			.andExpect(view().name("redirect:/owners/{ownerId}"));
 	}
 
 }

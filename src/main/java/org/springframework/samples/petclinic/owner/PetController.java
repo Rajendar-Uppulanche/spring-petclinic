@@ -51,7 +51,6 @@ class PetController {
 	private static final String VIEWS_PETS_CREATE_OR_UPDATE_FORM = "pets/createOrUpdatePetForm";
 
 	private final OwnerRepository owners;
-
 	private final PetTypeRepository types;
 
 	public PetController(OwnerRepository owners, PetTypeRepository types) {
@@ -137,13 +136,25 @@ class PetController {
 	}
 
 	@GetMapping("/pets/{petId}/edit")
-	public String initUpdateForm() {
+	public String initUpdateForm(@ModelAttribute("pet") Pet pet, ModelMap model) {
+		boolean isPetTypeReadOnly = !pet.getVisits().isEmpty();
+		model.addAttribute("isPetTypeReadOnly", isPetTypeReadOnly);
 		return VIEWS_PETS_CREATE_OR_UPDATE_FORM;
 	}
 
 	@PostMapping("/pets/{petId}/edit")
 	public String processUpdateForm(Owner owner, @Valid Pet pet, BindingResult result,
-			RedirectAttributes redirectAttributes) {
+			RedirectAttributes redirectAttributes, @PathVariable("petId") int petId) {
+
+		// Fetch the original pet from the database to check its visits and original type
+		// The @ModelAttribute("pet") provides the pet from the form, not the persisted one.
+		Owner originalOwner = this.owners.findById(owner.getId()).orElseThrow(() -> new IllegalArgumentException("Owner not found"));
+		Pet originalPet = originalOwner.getPet(petId); // Use petId to get the original pet
+
+		boolean hasVisits = !originalPet.getVisits().isEmpty();
+		if (hasVisits && !Objects.equals(originalPet.getType(), pet.getType())) {
+			result.rejectValue("type", "petTypeReadOnly", "Pet type cannot be changed if the pet has visits.");
+		}
 
 		String petName = pet.getName();
 
