@@ -22,7 +22,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 /**
- * Repository class for <code>Owner</code> domain objects. All method names are compliant
+ * Repository class for `Owner` domain objects. All method names are compliant
  * with Spring Data naming conventions so this interface can easily be extended for Spring
  * Data. See:
  * https://docs.spring.io/spring-data/jpa/docs/current/reference/html/#repositories.query-methods.query-creation
@@ -34,7 +34,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
  * @author Wick Dynex
  */
 public interface OwnerRepository extends JpaRepository<Owner, Integer> {
-
 	/**
 	 * Retrieve {@link Owner}s from the data store by last name, returning all owners
 	 * whose last name <i>starts</i> with the given name.
@@ -43,6 +42,18 @@ public interface OwnerRepository extends JpaRepository<Owner, Integer> {
 	 * found)
 	 */
 	Page<Owner> findByLastNameStartingWith(String lastName, Pageable pageable);
+
+	/**
+	 * Retrieve {@link Owner}s from the data store by last name or telephone number,
+	 * returning all owners whose last name <i>starts</i> with the given name
+	 * OR whose telephone number <i>starts</i> with the given number.
+	 * If a parameter is null, it is ignored in the search criteria.
+	 * @param lastName Value to search for by last name (can be null)
+	 * @param telephone Value to search for by telephone (can be null)
+	 * @param pageable Pagination information
+	 * @return a Page of matching {@link Owner}s (or an empty Page if none found)
+	 */
+	Page<Owner> findByLastNameStartingWithOrTelephoneStartingWith(String lastName, String telephone, Pageable pageable);
 
 	/**
 	 * Retrieve an {@link Owner} from the data store by id.
