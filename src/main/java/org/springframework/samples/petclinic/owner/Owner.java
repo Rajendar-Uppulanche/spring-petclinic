@@ -1,70 +1,41 @@
-/*
- * Copyright 2012-2025 the original author or authors.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package org.springframework.samples.petclinic.owner;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-
-import org.springframework.core.style.ToStringCreator;
-import org.springframework.samples.petclinic.model.Person;
-import org.springframework.util.Assert;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToMany;
-import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
-import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotBlank;
+import org.springframework.beans.support.MutableSortDefinition;
+import org.springframework.beans.support.PropertyComparator;
+import org.springframework.samples.petclinic.model.Person;
 
-/**
- * Simple JavaBean domain object representing an owner.
- *
- * @author Ken Krebs
- * @author Juergen Hoeller
- * @author Sam Brannen
- * @author Michael Isvy
- * @author Oliver Drotbohm
- * @author Wick Dynex
- */
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
 @Entity
 @Table(name = "owners")
 public class Owner extends Person {
 
-	@Column
+	@Column(name = "address")
 	@NotBlank
 	private String address;
 
-	@Column
+	@Column(name = "city")
 	@NotBlank
 	private String city;
 
-	@Column
+	@Column(name = "telephone")
 	@NotBlank
-	@Pattern(regexp = "\\d{10}", message = "{telephone.invalid}")
+	@Digits(fraction = 0, integer = 10)
 	private String telephone;
 
-	@OneToMany(cascade = CascadeType.ALL, fetch = FetchType.EAGER)
-	@JoinColumn(name = "owner_id")
-	@OrderBy("name")
-	private final List<Pet> pets = new ArrayList<>();
+	@OneToMany(cascade = CascadeType.ALL, mappedBy = "owner")
+	private Set<Pet> pets;
 
 	public String getAddress() {
 		return this.address;
@@ -90,53 +61,51 @@ public class Owner extends Person {
 		this.telephone = telephone;
 	}
 
-	public List<Pet> getPets() {
+	protected Set<Pet> getPetsInternal() {
+		if (this.pets == null) {
+			this.pets = new HashSet<>();
+		}
 		return this.pets;
+	}
+
+	protected void setPetsInternal(Set<Pet> pets) {
+		this.pets = pets;
+	}
+
+	public List<Pet> getPets() {
+		List<Pet> sortedPets = new ArrayList<>(getPetsInternal());
+		PropertyComparator.sort(sortedPets, new MutableSortDefinition("name", true, true));
+		return Collections.unmodifiableList(sortedPets);
 	}
 
 	public void addPet(Pet pet) {
 		if (pet.isNew()) {
-			getPets().add(pet);
+			getPetsInternal().add(pet);
+			pet.setOwner(this);
 		}
 	}
 
 	/**
 	 * Return the Pet with the given name, or null if none found for this Owner.
 	 * @param name to test
-	 * @return the Pet with the given name, or null if no such Pet exists for this Owner
+	 * @return true if pet name is already in use
 	 */
 	public Pet getPet(String name) {
 		return getPet(name, false);
 	}
 
 	/**
-	 * Return the Pet with the given id, or null if none found for this Owner.
-	 * @param id to test
-	 * @return the Pet with the given id, or null if no such Pet exists for this Owner
-	 */
-	public Pet getPet(Integer id) {
-		for (Pet pet : getPets()) {
-			if (!pet.isNew()) {
-				Integer compId = pet.getId();
-				if (Objects.equals(compId, id)) {
-					return pet;
-				}
-			}
-		}
-		return null;
-	}
-
-	/**
 	 * Return the Pet with the given name, or null if none found for this Owner.
 	 * @param name to test
-	 * @param ignoreNew whether to ignore new pets (pets that are not saved yet)
-	 * @return the Pet with the given name, or null if no such Pet exists for this Owner
+	 * @return true if pet name is already in use
 	 */
 	public Pet getPet(String name, boolean ignoreNew) {
-		for (Pet pet : getPets()) {
-			String compName = pet.getName();
-			if (compName != null && compName.equalsIgnoreCase(name)) {
-				if (!ignoreNew || !pet.isNew()) {
+		name = name.toLowerCase();
+		for (Pet pet : getPetsInternal()) {
+			if (!ignoreNew || !pet.isNew()) {
+				String compName = pet.getName();
+				compName = compName.toLowerCase();
+				if (compName.equals(name)) {
 					return pet;
 				}
 			}
@@ -144,33 +113,25 @@ public class Owner extends Person {
 		return null;
 	}
 
-	@Override
-	public String toString() {
-		return new ToStringCreator(this).append("id", this.getId())
-			.append("new", this.isNew())
-			.append("lastName", this.getLastName())
-			.append("firstName", this.getFirstName())
-			.append("address", this.address)
-			.append("city", this.city)
-			.append("telephone", this.telephone)
-			.toString();
+	/**
+	 * Return the Pet with the given id, or null if none found for this Owner.
+	 * @param id to test
+	 * @return true if pet id is already in use
+	 */
+	public Pet getPet(Integer id) {
+		for (Pet pet : getPetsInternal()) {
+			if (id.equals(pet.getId())) {
+				return pet;
+			}
+		}
+		return null;
 	}
 
-	/**
-	 * Adds the given {@link Visit} to the {@link Pet} with the given identifier.
-	 * @param petId the identifier of the {@link Pet}, must not be {@literal null}.
-	 * @param visit the visit to add, must not be {@literal null}.
-	 */
-	public void addVisit(Integer petId, Visit visit) {
-
-		Assert.notNull(petId, "Pet identifier must not be null!");
-		Assert.notNull(visit, "Visit must not be null!");
-
+	public void addVisit(int petId, Visit visit) {
 		Pet pet = getPet(petId);
-
-		Assert.notNull(pet, "Invalid Pet identifier!");
-
+		if (pet == null) {
+			throw new IllegalArgumentException("Pet with id " + petId + " not found for owner with id " + getId() + ".");
+		}
 		pet.addVisit(visit);
 	}
-
 }
