@@ -78,6 +78,8 @@ class OwnerControllerTests {
 		george.setAddress("110 W. Liberty St.");
 		george.setCity("Madison");
 		george.setTelephone("6085551023");
+		george.setEmail("george.franklin@example.com");
+		george.setReceivesVaccinationReminders(true);
 		Pet max = new Pet();
 		PetType dog = new PetType();
 		dog.setName("dog");
@@ -118,7 +120,9 @@ class OwnerControllerTests {
 				.param("lastName", "Bloggs")
 				.param("address", "123 Caramel Street")
 				.param("city", "London")
-				.param("telephone", "1316761638"))
+				.param("telephone", "1316761638")
+				.param("email", "joe.bloggs@example.com")
+				.param("receivesVaccinationReminders", "true"))
 			.andExpect(status().is3xxRedirection());
 	}
 
@@ -205,6 +209,8 @@ class OwnerControllerTests {
 			.andExpect(model().attribute("owner", hasProperty("address", is("110 W. Liberty St."))))
 			.andExpect(model().attribute("owner", hasProperty("city", is("Madison"))))
 			.andExpect(model().attribute("owner", hasProperty("telephone", is("6085551023"))))
+			.andExpect(model().attribute("owner", hasProperty("email", is("george.franklin@example.com"))))
+			.andExpect(model().attribute("owner", hasProperty("receivesVaccinationReminders", is(true))))
 			.andExpect(view().name("owners/createOrUpdateOwnerForm"));
 	}
 
@@ -215,7 +221,9 @@ class OwnerControllerTests {
 				.param("lastName", "Bloggs")
 				.param("address", "123 Caramel Street")
 				.param("city", "London")
-				.param("telephone", "1616291589"))
+				.param("telephone", "1616291589")
+				.param("email", "joe.bloggs@example.com")
+				.param("receivesVaccinationReminders", "false"))
 			.andExpect(status().is3xxRedirection())
 			.andExpect(view().name("redirect:/owners/{ownerId}"));
 	}
@@ -233,11 +241,13 @@ class OwnerControllerTests {
 			.perform(post("/owners/{ownerId}/edit", TEST_OWNER_ID).param("firstName", "Joe")
 				.param("lastName", "Bloggs")
 				.param("address", "")
-				.param("telephone", ""))
+				.param("telephone", "")
+				.param("email", "invalid-email"))
 			.andExpect(status().isOk())
 			.andExpect(model().attributeHasErrors("owner"))
 			.andExpect(model().attributeHasFieldErrors("owner", "address"))
 			.andExpect(model().attributeHasFieldErrors("owner", "telephone"))
+			.andExpect(model().attributeHasFieldErrors("owner", "email"))
 			.andExpect(view().name("owners/createOrUpdateOwnerForm"));
 	}
 
@@ -250,6 +260,8 @@ class OwnerControllerTests {
 			.andExpect(model().attribute("owner", hasProperty("address", is("110 W. Liberty St."))))
 			.andExpect(model().attribute("owner", hasProperty("city", is("Madison"))))
 			.andExpect(model().attribute("owner", hasProperty("telephone", is("6085551023"))))
+			.andExpect(model().attribute("owner", hasProperty("email", is("george.franklin@example.com"))))
+			.andExpect(model().attribute("owner", hasProperty("receivesVaccinationReminders", is(true))))
 			.andExpect(model().attribute("owner", hasProperty("pets", not(empty()))))
 			.andExpect(model().attribute("owner",
 					hasProperty("pets", hasItem(hasProperty("visits", hasSize(greaterThan(0)))))))
@@ -267,6 +279,8 @@ class OwnerControllerTests {
 		owner.setAddress("Center Street");
 		owner.setCity("New York");
 		owner.setTelephone("0123456789");
+		owner.setEmail("john.doe@example.com");
+		owner.setReceivesVaccinationReminders(true);
 
 		when(owners.findById(pathOwnerId)).thenReturn(Optional.of(owner));
 
@@ -276,4 +290,32 @@ class OwnerControllerTests {
 			.andExpect(flash().attributeExists("error"));
 	}
 
+	@Test
+	void unsubscribeFromRemindersSuccess() throws Exception {
+		Owner owner = george();
+		owner.setReceivesVaccinationReminders(true);
+		when(owners.findById(TEST_OWNER_ID)).thenReturn(Optional.of(owner));
+
+		mockMvc.perform(get("/owners/{ownerId}/unsubscribe", TEST_OWNER_ID))
+				.andExpect(status().is3xxRedirection())
+				.andExpect(redirectedUrl("/owners/" + TEST_OWNER_ID))
+				.andExpect(flash().attributeExists("message"));
+
+		verify(owners, times(1)).findById(TEST_OWNER_ID);
+		verify(owners, times(1)).save(owner);
+		assertThat(owner.isReceivesVaccinationReminders()).isFalse();
+	}
+
+	@Test
+	void unsubscribeFromRemindersOwnerNotFound() throws Exception {
+		when(owners.findById(TEST_OWNER_ID)).thenReturn(Optional.empty());
+
+		mockMvc.perform(get("/owners/{ownerId}/unsubscribe", TEST_OWNER_ID))
+				.andExpect(status().is3xxRedirection())
+				.andExpect(redirectedUrl("/"))
+				.andExpect(flash().attributeExists("error"));
+
+		verify(owners, times(1)).findById(TEST_OWNER_ID);
+		verify(owners, never()).save(any(Owner.class));
+	}
 }
