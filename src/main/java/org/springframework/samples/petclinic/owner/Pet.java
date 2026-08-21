@@ -16,8 +16,10 @@
 package org.springframework.samples.petclinic.owner;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
 
 import org.springframework.format.annotation.DateTimeFormat;
@@ -53,10 +55,18 @@ public class Pet extends NamedEntity {
 	@JoinColumn(name = "type_id")
 	private PetType type;
 
+	@ManyToOne
+	@JoinColumn(name = "owner_id", insertable = false, updatable = false)
+	private Owner owner;
+
 	@OneToMany(cascade = CascadeType.ALL, fetch = FetchType.EAGER)
 	@JoinColumn(name = "pet_id")
 	@OrderBy("date ASC")
 	private final Set<Visit> visits = new LinkedHashSet<>();
+
+	@OneToMany(cascade = CascadeType.ALL, fetch = FetchType.EAGER, mappedBy = "pet")
+	@OrderBy("dueDate ASC")
+	private List<Vaccination> vaccinations = new ArrayList<>();
 
 	public void setBirthDate(LocalDate birthDate) {
 		this.birthDate = birthDate;
@@ -74,6 +84,14 @@ public class Pet extends NamedEntity {
 		this.type = type;
 	}
 
+	public Owner getOwner() {
+		return owner;
+	}
+
+	public void setOwner(Owner owner) {
+		this.owner = owner;
+	}
+
 	public Collection<Visit> getVisits() {
 		return this.visits;
 	}
@@ -82,4 +100,18 @@ public class Pet extends NamedEntity {
 		getVisits().add(visit);
 	}
 
+	public List<Vaccination> getVaccinations() {
+		return vaccinations;
+	}
+
+	public void setVaccinations(List<Vaccination> vaccinations) {
+		this.vaccinations = vaccinations;
+	}
+
+	public void addVaccination(Vaccination vaccination) {
+		if (vaccination.isNew()) {
+			this.vaccinations.add(vaccination);
+			vaccination.setPet(this);
+		}
+	}
 }
