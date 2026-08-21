@@ -1,0 +1,47 @@
+<%= form_with(model: visit) do |form| %>
+  <% if visit.errors.any? %>
+    <div style="color: red">
+      <h2><%= pluralize(visit.errors.count, "error") %> prohibited this visit from being saved:</h2>
+
+      <ul>
+        <% visit.errors.each do |error| %>
+          <li><%= error.full_message %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div>
+    <%= form.label :pet_id, style: "display: block" %>
+    <%= form.collection_select :pet_id, Pet.all, :id, :name, prompt: "Select a Pet" %>
+  </div>
+
+  <div>
+    <%= form.label :veterinarian_id, style: "display: block" %>
+    <%= form.collection_select :veterinarian_id, Veterinarian.all, :id, :name, prompt: "Select a Veterinarian" %>
+  </div>
+
+  <div>
+    <%= form.label :visit_date, style: "display: block" %>
+    <%= form.date_field :visit_date %>
+  </div>
+
+  <div>
+    <%= form.label :reason, style: "display: block" %>
+    <%= form.text_field :reason %>
+  </div>
+
+  <div>
+    <%= form.label :notes, style: "display: block" %>
+    <%= form.text_area :notes %>
+  </div>
+
+  <div>
+    <%= form.label :weight, "Pet Weight (kg)", style: "display: block" %>
+    <%= form.number_field :weight, step: 0.1, min: 0 %>
+  </div>
+
+  <div>
+    <%= form.submit %>
+  </div>
+<% end %>
