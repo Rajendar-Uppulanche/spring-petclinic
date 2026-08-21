@@ -276,4 +276,243 @@ class OwnerControllerTests {
 			.andExpect(flash().attributeExists("error"));
 	}
 
+	// --- New Tests for Phone Number Validation (Creation) ---
+
+	@Test
+	void processCreationFormWithInvalidTelephoneRegression() throws Exception {
+		mockMvc
+			.perform(post("/owners/new").param("firstName", "Jane")
+				.param("lastName", "Doe")
+				.param("address", "123 Main St")
+				.param("city", "Anytown")
+				.param("telephone", "abc1234567")) // Invalid telephone
+			.andExpect(status().isOk())
+			.andExpect(model().attributeHasErrors("owner"))
+			.andExpect(model().attributeHasFieldErrors("owner", "telephone"))
+			.andExpect(view().name("owners/createOrUpdateOwnerForm"));
+	}
+
+	@Test
+	void processCreationFormWithValidTelephone10Digits() throws Exception {
+		mockMvc
+			.perform(post("/owners/new").param("firstName", "John")
+				.param("lastName", "Smith")
+				.param("address", "456 Oak Ave")
+				.param("city", "Someplace")
+				.param("telephone", "1234567890")) // 10 digits
+			.andExpect(status().is3xxRedirection());
+	}
+
+	@Test
+	void processCreationFormWithValidTelephone15Digits() throws Exception {
+		mockMvc
+			.perform(post("/owners/new").param("firstName", "John")
+				.param("lastName", "Smith")
+				.param("address", "456 Oak Ave")
+				.param("city", "Someplace")
+				.param("telephone", "123456789012345")) // 15 digits
+			.andExpect(status().is3xxRedirection());
+	}
+
+	@Test
+	void processCreationFormWithValidTelephoneWithDashes() throws Exception {
+		mockMvc
+			.perform(post("/owners/new").param("firstName", "John")
+				.param("lastName", "Smith")
+				.param("address", "456 Oak Ave")
+				.param("city", "Someplace")
+				.param("telephone", "123-456-7890")) // With dashes
+			.andExpect(status().is3xxRedirection());
+	}
+
+	@Test	void processCreationFormWithValidTelephoneWithParentheses() throws Exception {
+		mockMvc
+			.perform(post("/owners/new").param("firstName", "John")
+				.param("lastName", "Smith")
+				.param("address", "456 Oak Ave")
+				.param("city", "Someplace")
+				.param("telephone", "(123)456-7890")) // With parentheses
+			.andExpect(status().is3xxRedirection());
+	}
+
+	@Test
+	void processCreationFormWithValidTelephoneWithSpaces() throws Exception {
+		mockMvc
+			.perform(post("/owners/new").param("firstName", "John")
+				.param("lastName", "Smith")
+				.param("address", "456 Oak Ave")
+				.param("city", "Someplace")
+				.param("telephone", "123 456 7890")) // With spaces
+			.andExpect(status().is3xxRedirection());
+	}
+
+	@Test
+	void processCreationFormWithValidTelephoneMixedFormat() throws Exception {
+		mockMvc
+			.perform(post("/owners/new").param("firstName", "John")
+				.param("lastName", "Smith")
+				.param("address", "456 Oak Ave")
+				.param("city", "Someplace")
+				.param("telephone", "(123) 456-7890")) // Mixed format
+			.andExpect(status().is3xxRedirection());
+	}
+
+	@Test
+	void processCreationFormWithInvalidTelephoneTooFewDigits() throws Exception {
+		mockMvc
+			.perform(post("/owners/new").param("firstName", "Jane")
+				.param("lastName", "Doe")
+				.param("address", "123 Main St")
+				.param("city", "Anytown")
+				.param("telephone", "123456789")) // 9 digits
+			.andExpect(status().isOk())
+			.andExpect(model().attributeHasErrors("owner"))
+			.andExpect(model().attributeHasFieldErrors("owner", "telephone"))
+			.andExpect(view().name("owners/createOrUpdateOwnerForm"));
+	}
+
+	@Test
+	void processCreationFormWithInvalidTelephoneTooManyDigits() throws Exception {
+		mockMvc
+			.perform(post("/owners/new").param("firstName", "Jane")
+				.param("lastName", "Doe")
+				.param("address", "123 Main St")
+				.param("city", "Anytown")
+				.param("telephone", "1234567890123456")) // 16 digits
+			.andExpect(status().isOk())
+			.andExpect(model().attributeHasErrors("owner"))
+			.andExpect(model().attributeHasFieldErrors("owner", "telephone"))
+			.andExpect(view().name("owners/createOrUpdateOwnerForm"));
+	}
+
+	@Test
+	void processCreationFormWithInvalidTelephoneInvalidChars() throws Exception {
+		mockMvc
+			.perform(post("/owners/new").param("firstName", "Jane")
+				.param("lastName", "Doe")
+				.param("address", "123 Main St")
+				.param("city", "Anytown")
+				.param("telephone", "123*456#7890")) // Invalid special characters
+			.andExpect(status().isOk())
+			.andExpect(model().attributeHasErrors("owner"))
+			.andExpect(model().attributeHasFieldErrors("owner", "telephone"))
+			.andExpect(view().name("owners/createOrUpdateOwnerForm"));
+	}
+
+	// --- New Tests for Phone Number Validation (Update) ---
+
+	@Test
+	void processUpdateOwnerFormWithValidTelephone10Digits() throws Exception {
+		mockMvc
+			.perform(post("/owners/{ownerId}/edit", TEST_OWNER_ID).param("firstName", "George")
+				.param("lastName", "Franklin")
+				.param("address", "110 W. Liberty St.")
+				.param("city", "Madison")
+				.param("telephone", "1234567890")) // 10 digits
+			.andExpect(status().is3xxRedirection())
+			.andExpect(view().name("redirect:/owners/{ownerId}"));
+	}
+
+	@Test
+	void processUpdateOwnerFormWithValidTelephone15Digits() throws Exception {
+		mockMvc
+			.perform(post("/owners/{ownerId}/edit", TEST_OWNER_ID).param("firstName", "George")
+				.param("lastName", "Franklin")
+				.param("address", "110 W. Liberty St.")
+				.param("city", "Madison")
+				.param("telephone", "123456789012345")) // 15 digits
+			.andExpect(status().is3xxRedirection())
+			.andExpect(view().name("redirect:/owners/{ownerId}"));
+	}
+
+	@Test
+	void processUpdateOwnerFormWithValidTelephoneWithDashes() throws Exception {
+		mockMvc
+			.perform(post("/owners/{ownerId}/edit", TEST_OWNER_ID).param("firstName", "George")
+				.param("lastName", "Franklin")
+				.param("address", "110 W. Liberty St.")
+				.param("city", "Madison")
+				.param("telephone", "123-456-7890")) // With dashes
+			.andExpect(status().is3xxRedirection())
+			.andExpect(view().name("redirect:/owners/{ownerId}"));
+	}
+
+	@Test
+	void processUpdateOwnerFormWithValidTelephoneWithParentheses() throws Exception {
+		mockMvc
+			.perform(post("/owners/{ownerId}/edit", TEST_OWNER_ID).param("firstName", "George")
+				.param("lastName", "Franklin")
+				.param("address", "110 W. Liberty St.")
+				.param("city", "Madison")
+				.param("telephone", "(123)456-7890")) // With parentheses
+			.andExpect(status().is3xxRedirection())
+			.andExpect(view().name("redirect:/owners/{ownerId}"));
+	}
+
+	@Test
+	void processUpdateOwnerFormWithValidTelephoneWithSpaces() throws Exception {
+		mockMvc
+			.perform(post("/owners/{ownerId}/edit", TEST_OWNER_ID).param("firstName", "George")
+				.param("lastName", "Franklin")
+				.param("address", "110 W. Liberty St.")
+				.param("city", "Madison")
+				.param("telephone", "123 456 7890")) // With spaces
+			.andExpect(status().is3xxRedirection())
+			.andExpect(view().name("redirect:/owners/{ownerId}"));
+	}
+
+	@Test
+	void processUpdateOwnerFormWithValidTelephoneMixedFormat() throws Exception {
+		mockMvc
+			.perform(post("/owners/{ownerId}/edit", TEST_OWNER_ID).param("firstName", "George")
+				.param("lastName", "Franklin")
+				.param("address", "110 W. Liberty St.")
+				.param("city", "Madison")
+				.param("telephone", "(123) 456-7890")) // Mixed format
+			.andExpect(status().is3xxRedirection())
+			.andExpect(view().name("redirect:/owners/{ownerId}"));
+	}
+
+	@Test
+	void processUpdateOwnerFormWithInvalidTelephoneTooFewDigits() throws Exception {
+		mockMvc
+			.perform(post("/owners/{ownerId}/edit", TEST_OWNER_ID).param("firstName", "George")
+				.param("lastName", "Franklin")
+				.param("address", "110 W. Liberty St.")
+				.param("city", "Madison")
+				.param("telephone", "123456789")) // 9 digits
+			.andExpect(status().isOk())
+			.andExpect(model().attributeHasErrors("owner"))
+			.andExpect(model().attributeHasFieldErrors("owner", "telephone"))
+			.andExpect(view().name("owners/createOrUpdateOwnerForm"));
+	}
+
+	@Test
+	void processUpdateOwnerFormWithInvalidTelephoneTooManyDigits() throws Exception {
+		mockMvc
+			.perform(post("/owners/{ownerId}/edit", TEST_OWNER_ID).param("firstName", "George")
+				.param("lastName", "Franklin")
+				.param("address", "110 W. Liberty St.")
+				.param("city", "Madison")
+				.param("telephone", "1234567890123456")) // 16 digits
+			.andExpect(status().isOk())
+			.andExpect(model().attributeHasErrors("owner"))
+			.andExpect(model().attributeHasFieldErrors("owner", "telephone"))
+			.andExpect(view().name("owners/createOrUpdateOwnerForm"));
+	}
+
+	@Test
+	void processUpdateOwnerFormWithInvalidTelephoneInvalidChars() throws Exception {
+		mockMvc
+			.perform(post("/owners/{ownerId}/edit", TEST_OWNER_ID).param("firstName", "George")
+				.param("lastName", "Franklin")
+				.param("address", "110 W. Liberty St.")
+				.param("city", "Madison")
+				.param("telephone", "123*456#7890")) // Invalid special characters
+			.andExpect(status().isOk())
+			.andExpect(model().attributeHasErrors("owner"))
+			.andExpect(model().attributeHasFieldErrors("owner", "telephone"))
+			.andExpect(view().name("owners/createOrUpdateOwnerForm"));
+	}
+
 }
