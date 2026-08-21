@@ -54,6 +54,8 @@
           <dd th:text="${#temporals.format(pet.birthDate, 'yyyy-MM-dd')}"></dd>
           <dt th:text="#{type}">Type</dt>
           <dd th:text="${pet.type}"></dd>
+          <dt th:text="Visit Count">Visit Count</dt>
+          <dd th:text="${pet.visitCount}"></dd>
         </dl>
       </td>
       <td valign="top">
